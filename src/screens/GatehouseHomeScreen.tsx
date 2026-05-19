@@ -1,11 +1,12 @@
+import { useEffect, useMemo, useState } from 'react';
 import { Alert, StyleSheet, Text, View } from 'react-native';
 
 import { Card } from '../components/Card';
 import { PrimaryButton } from '../components/PrimaryButton';
-import { demoCalls, demoUnits } from '../data/demo-data';
-import { startGatehouseToUnitCall } from '../services/calls';
+import { demoUnits } from '../data/demo-data';
+import { getMyCallHistory, startGatehouseToUnitCall } from '../services/calls';
 import { theme } from '../theme/theme';
-import type { AuthenticatedUser, UnitDirectoryItem, UserContext } from '../types/domain';
+import type { AuthenticatedUser, BackendCallRecord, CallRecord, UnitDirectoryItem, UserContext } from '../types/domain';
 
 type GatehouseHomeScreenProps = {
   context: UserContext;
@@ -14,9 +15,17 @@ type GatehouseHomeScreenProps = {
 };
 
 export function GatehouseHomeScreen({ context, directoryUnits, user }: GatehouseHomeScreenProps) {
-  const ringingCalls = demoCalls.filter((call) => call.status === 'ringing').length;
   const activeDevice = context.portaria_devices.find((device) => device.is_active);
   const units = directoryUnits.length > 0 ? directoryUnits : demoUnits;
+  const unitLabels = useMemo(() => new Map(units.map((unit) => [unit.id, unit.label])), [units]);
+  const [feedback, setFeedback] = useState<string | null>(null);
+  const [history, setHistory] = useState<CallRecord[]>([]);
+  const [activeCallTarget, setActiveCallTarget] = useState<string | null>(null);
+  const ringingCalls = history.filter((call) => call.status === 'RINGING').length;
+
+  useEffect(() => {
+    refreshHistory(unitLabels, setHistory, setFeedback);
+  }, [unitLabels]);
 
   return (
     <View style={styles.screen}>
@@ -57,15 +66,40 @@ export function GatehouseHomeScreen({ context, directoryUnits, user }: Gatehouse
         <Text style={styles.sectionTitle}>Unidades</Text>
         <View style={styles.list}>
           {units.map((unit) => (
-            <GatehouseUnitCard key={unit.id} unit={unit} />
+            <GatehouseUnitCard
+              activeCallTarget={activeCallTarget}
+              key={unit.id}
+              setActiveCallTarget={setActiveCallTarget}
+              setFeedback={setFeedback}
+              unit={unit}
+            />
           ))}
         </View>
+        {feedback ? <Text style={styles.feedback}>{feedback}</Text> : null}
+      </View>
+
+      <View style={styles.section}>
+        <View style={styles.rowBetween}>
+          <Text style={styles.sectionTitle}>Historico recente</Text>
+          <PrimaryButton label="Atualizar" tone="neutral" onPress={() => refreshHistory(unitLabels, setHistory, setFeedback)} />
+        </View>
+        <CallHistory calls={history} />
       </View>
     </View>
   );
 }
 
-function GatehouseUnitCard({ unit }: { unit: UnitDirectoryItem }) {
+function GatehouseUnitCard({
+  activeCallTarget,
+  setActiveCallTarget,
+  setFeedback,
+  unit,
+}: {
+  activeCallTarget: string | null;
+  setActiveCallTarget: (target: string | null) => void;
+  setFeedback: (message: string | null) => void;
+  unit: UnitDirectoryItem;
+}) {
   return (
     <Card>
       <View style={styles.rowBetween}>
@@ -79,11 +113,12 @@ function GatehouseUnitCard({ unit }: { unit: UnitDirectoryItem }) {
       </View>
       <View style={styles.cardAction}>
         <PrimaryButton
-          label="Chamar unidade"
+          disabled={!unit.canReceiveCalls || activeCallTarget !== null}
+          label={activeCallTarget === unit.id ? 'Chamando...' : 'Chamar unidade'}
           tone={unit.canReceiveCalls ? 'primary' : 'neutral'}
           onPress={() =>
             unit.canReceiveCalls
-              ? handleGatehouseToUnitCall(unit.id, unit.label)
+              ? handleGatehouseToUnitCall(unit.id, unit.label, setFeedback, setActiveCallTarget)
               : Alert.alert('Unidade bloqueada', 'Esta unidade nao recebe chamadas no momento.')
           }
         />
@@ -92,13 +127,102 @@ function GatehouseUnitCard({ unit }: { unit: UnitDirectoryItem }) {
   );
 }
 
-async function handleGatehouseToUnitCall(unitId: string, unitLabel: string) {
+function CallHistory({ calls }: { calls: CallRecord[] }) {
+  return (
+    <View style={styles.list}>
+      {calls.length === 0 ? (
+        <Card>
+          <Text style={styles.itemMeta}>Nenhuma chamada encontrada para esta portaria.</Text>
+        </Card>
+      ) : (
+        calls.map((call) => (
+          <Card key={call.id}>
+            <Text style={styles.itemTitle}>
+              {call.fromLabel} para {call.toLabel}
+            </Text>
+            <Text style={styles.itemMeta}>
+              {callStatusLabel(call.status)} - {call.startedAt}
+            </Text>
+          </Card>
+        ))
+      )}
+    </View>
+  );
+}
+
+async function handleGatehouseToUnitCall(
+  unitId: string,
+  unitLabel: string,
+  setFeedback: (message: string | null) => void,
+  setActiveCallTarget: (target: string | null) => void,
+) {
+  setFeedback(`Chamando ${unitLabel}...`);
+  setActiveCallTarget(unitId);
+
   try {
     const call = await startGatehouseToUnitCall(unitId);
-    Alert.alert('Chamada iniciada', `${unitLabel} esta tocando. Status: ${call.status}.`);
+    setFeedback(`Chamada iniciada para ${unitLabel}. Status: ${call.status}.`);
   } catch (err) {
-    Alert.alert('Nao foi possivel chamar', err instanceof Error ? err.message : 'Tente novamente.');
+    setFeedback(`Nao foi possivel chamar ${unitLabel}: ${err instanceof Error ? err.message : 'Tente novamente.'}`);
+  } finally {
+    setActiveCallTarget(null);
   }
+}
+
+async function refreshHistory(
+  unitLabels: Map<string, string>,
+  setHistory: (history: CallRecord[]) => void,
+  setFeedback: (message: string | null) => void,
+) {
+  try {
+    const calls = await getMyCallHistory();
+    setHistory(calls.map((call) => mapBackendCall(call, unitLabels)));
+  } catch (err) {
+    setFeedback(`Nao foi possivel carregar o historico: ${err instanceof Error ? err.message : 'Tente novamente.'}`);
+  }
+}
+
+function mapBackendCall(call: BackendCallRecord, unitLabels: Map<string, string>): CallRecord {
+  const targetUnit = unitLabels.get(call.unit_id) ?? 'Unidade';
+  const originUnit = call.origin_unit_id ? unitLabels.get(call.origin_unit_id) ?? 'Unidade' : 'Unidade';
+
+  return {
+    id: call.id,
+    direction:
+      call.origin_type === 'PORTARIA'
+        ? 'gatehouse_to_unit'
+        : call.target_type === 'PORTARIA'
+          ? 'resident_to_gatehouse'
+          : 'resident_to_unit',
+    fromLabel: call.origin_type === 'PORTARIA' ? 'Portaria' : originUnit,
+    toLabel: call.target_type === 'PORTARIA' ? 'Portaria' : targetUnit,
+    status: call.status,
+    startedAt: formatDateTime(call.started_at),
+  };
+}
+
+function formatDateTime(value: string) {
+  return new Intl.DateTimeFormat('pt-BR', {
+    day: '2-digit',
+    hour: '2-digit',
+    minute: '2-digit',
+    month: '2-digit',
+  }).format(new Date(value));
+}
+
+function callStatusLabel(status: CallRecord['status']) {
+  const labels = {
+    ANSWERED: 'Atendida',
+    CANCELLED: 'Cancelada',
+    MISSED: 'Perdida',
+    RINGING: 'Tocando',
+    answered: 'Atendida',
+    ended: 'Encerrada',
+    missed: 'Perdida',
+    ringing: 'Tocando',
+  };
+
+  return labels[status];
 }
 
 const styles = StyleSheet.create({
@@ -189,6 +313,12 @@ const styles = StyleSheet.create({
     color: theme.colors.danger,
   },
   cardAction: {
+    marginTop: theme.spacing.md,
+  },
+  feedback: {
+    color: theme.colors.primaryDark,
+    fontSize: 14,
+    fontWeight: '700',
     marginTop: theme.spacing.md,
   },
 });

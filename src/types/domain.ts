@@ -2,7 +2,7 @@ export type AppProfile = 'resident' | 'gatehouse';
 
 export type BackendRole = 'ADMIN' | 'MANAGER' | 'MORADOR' | 'PORTARIA' | string;
 
-export type CallStatus = 'ringing' | 'answered' | 'missed' | 'ended';
+export type CallStatus = 'RINGING' | 'ANSWERED' | 'MISSED' | 'CANCELLED' | 'ringing' | 'answered' | 'missed' | 'ended';
 
 export type CallDirection = 'resident_to_gatehouse' | 'gatehouse_to_unit' | 'resident_to_unit';
 
@@ -68,4 +68,20 @@ export type CallRecord = {
   toLabel: string;
   status: CallStatus;
   startedAt: string;
+};
+
+export type BackendCallRecord = {
+  id: string;
+  unit_id: string;
+  origin_type: 'PORTARIA' | 'UNIT';
+  origin_unit_id: string | null;
+  origin_portaria_device_id: string | null;
+  target_type: 'PORTARIA' | 'UNIT';
+  target_portaria_device_id: string | null;
+  status: 'RINGING' | 'ANSWERED' | 'MISSED' | 'CANCELLED';
+  answered_by: string | null;
+  started_at: string;
+  answered_at: string | null;
+  ended_at: string | null;
+  created_at: string;
 };

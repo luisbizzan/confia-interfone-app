@@ -1,12 +1,12 @@
-import { useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { Alert, StyleSheet, Text, View } from 'react-native';
 
 import { Card } from '../components/Card';
 import { PrimaryButton } from '../components/PrimaryButton';
-import { demoCalls, demoUnits } from '../data/demo-data';
-import { startResidentToGatehouseCall, startResidentToUnitCall } from '../services/calls';
+import { demoUnits } from '../data/demo-data';
+import { getMyCallHistory, startResidentToGatehouseCall, startResidentToUnitCall } from '../services/calls';
 import { theme } from '../theme/theme';
-import type { AuthenticatedUser, CallRecord, UnitDirectoryItem, UserContext } from '../types/domain';
+import type { AuthenticatedUser, BackendCallRecord, CallRecord, UnitDirectoryItem, UserContext } from '../types/domain';
 
 type ResidentHomeScreenProps = {
   context: UserContext;
@@ -18,8 +18,14 @@ export function ResidentHomeScreen({ context, directoryUnits, user }: ResidentHo
   const myUnits = context.unit_members.map((member) => formatUnitLabel(member.unit));
   const originUnit = context.unit_members.find((member) => member.active_for_calls && member.can_make_calls);
   const units = directoryUnits.length > 0 ? directoryUnits : myUnits.length > 0 ? buildUnitsFromContext(context) : demoUnits;
+  const unitLabels = useMemo(() => buildUnitLabelMap([...directoryUnits, ...buildUnitsFromContext(context)]), [context, directoryUnits]);
+  const [history, setHistory] = useState<CallRecord[]>([]);
   const [feedback, setFeedback] = useState<string | null>(null);
   const [activeCallTarget, setActiveCallTarget] = useState<string | null>(null);
+
+  useEffect(() => {
+    refreshHistory(unitLabels, setHistory, setFeedback);
+  }, [unitLabels]);
 
   return (
     <View style={styles.screen}>
@@ -46,7 +52,7 @@ export function ResidentHomeScreen({ context, directoryUnits, user }: ResidentHo
               handleResidentToGatehouseCall(originUnit.unit_id, setFeedback, setActiveCallTarget);
             }}
           />
-          <PrimaryButton label="Ver historico" tone="neutral" onPress={() => showInfo('Historico completo entra nesta fase.')} />
+          <PrimaryButton label="Atualizar historico" tone="neutral" onPress={() => refreshHistory(unitLabels, setHistory, setFeedback)} />
         </View>
         {feedback ? <Text style={styles.feedback}>{feedback}</Text> : null}
       </Card>
@@ -67,7 +73,7 @@ export function ResidentHomeScreen({ context, directoryUnits, user }: ResidentHo
         </View>
       </View>
 
-      <CallHistory calls={demoCalls} />
+      <CallHistory calls={history} />
     </View>
   );
 }
@@ -85,6 +91,10 @@ function buildUnitsFromContext(context: UserContext): UnitDirectoryItem[] {
 
 function formatUnitLabel(unit: UserContext['unit_members'][number]['unit']) {
   return [unit.block, unit.number].filter(Boolean).join(' - ');
+}
+
+function buildUnitLabelMap(units: UnitDirectoryItem[]) {
+  return new Map(units.map((unit) => [unit.id, unit.label]));
 }
 
 function UnitCard({
@@ -145,19 +155,66 @@ function CallHistory({ calls }: { calls: CallRecord[] }) {
     <View style={styles.section}>
       <Text style={styles.sectionTitle}>Historico recente</Text>
       <View style={styles.list}>
-        {calls.map((call) => (
-          <Card key={call.id}>
-            <Text style={styles.itemTitle}>
-              {call.fromLabel} para {call.toLabel}
-            </Text>
-            <Text style={styles.itemMeta}>
-              {callStatusLabel(call.status)} - {call.startedAt}
-            </Text>
+        {calls.length === 0 ? (
+          <Card>
+            <Text style={styles.itemMeta}>Nenhuma chamada encontrada para este usuario.</Text>
           </Card>
-        ))}
+        ) : (
+          calls.map((call) => (
+            <Card key={call.id}>
+              <Text style={styles.itemTitle}>
+                {call.fromLabel} para {call.toLabel}
+              </Text>
+              <Text style={styles.itemMeta}>
+                {callStatusLabel(call.status)} - {call.startedAt}
+              </Text>
+            </Card>
+          ))
+        )}
       </View>
     </View>
   );
+}
+
+async function refreshHistory(
+  unitLabels: Map<string, string>,
+  setHistory: (history: CallRecord[]) => void,
+  setFeedback: (message: string | null) => void,
+) {
+  try {
+    const calls = await getMyCallHistory();
+    setHistory(calls.map((call) => mapBackendCall(call, unitLabels)));
+  } catch (err) {
+    setFeedback(`Nao foi possivel carregar o historico: ${err instanceof Error ? err.message : 'Tente novamente.'}`);
+  }
+}
+
+function mapBackendCall(call: BackendCallRecord, unitLabels: Map<string, string>): CallRecord {
+  const targetUnit = unitLabels.get(call.unit_id) ?? 'Unidade';
+  const originUnit = call.origin_unit_id ? unitLabels.get(call.origin_unit_id) ?? 'Unidade' : 'Unidade';
+
+  return {
+    id: call.id,
+    direction:
+      call.origin_type === 'PORTARIA'
+        ? 'gatehouse_to_unit'
+        : call.target_type === 'PORTARIA'
+          ? 'resident_to_gatehouse'
+          : 'resident_to_unit',
+    fromLabel: call.origin_type === 'PORTARIA' ? 'Portaria' : originUnit,
+    toLabel: call.target_type === 'PORTARIA' ? 'Portaria' : targetUnit,
+    status: call.status,
+    startedAt: formatDateTime(call.started_at),
+  };
+}
+
+function formatDateTime(value: string) {
+  return new Intl.DateTimeFormat('pt-BR', {
+    day: '2-digit',
+    hour: '2-digit',
+    minute: '2-digit',
+    month: '2-digit',
+  }).format(new Date(value));
 }
 
 function showInfo(message: string) {
@@ -209,6 +266,10 @@ async function handleResidentToUnitCall(
 
 function callStatusLabel(status: CallRecord['status']) {
   const labels = {
+    ANSWERED: 'Atendida',
+    CANCELLED: 'Cancelada',
+    MISSED: 'Perdida',
+    RINGING: 'Tocando',
     answered: 'Atendida',
     ended: 'Encerrada',
     missed: 'Perdida',
