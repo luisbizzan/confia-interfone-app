@@ -42,8 +42,7 @@ Nunca coloque chaves administrativas ou `service_role_key` no app.
 - `get_my_call_history`
 - `start_portaria_call`
 - `start_unit_to_portaria_call`
-
-Ainda falta no backend a RPC para chamada entre unidades do mesmo condominio.
+- `start_unit_to_unit_call`
 
 ## Documentacao
 

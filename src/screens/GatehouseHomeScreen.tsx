@@ -3,6 +3,7 @@ import { Alert, StyleSheet, Text, View } from 'react-native';
 import { Card } from '../components/Card';
 import { PrimaryButton } from '../components/PrimaryButton';
 import { demoCalls, demoUnits } from '../data/demo-data';
+import { startGatehouseToUnitCall } from '../services/calls';
 import { theme } from '../theme/theme';
 import type { AuthenticatedUser, UnitDirectoryItem, UserContext } from '../types/domain';
 
@@ -82,13 +83,22 @@ function GatehouseUnitCard({ unit }: { unit: UnitDirectoryItem }) {
           tone={unit.canReceiveCalls ? 'primary' : 'neutral'}
           onPress={() =>
             unit.canReceiveCalls
-              ? Alert.alert('Chamada preparada', `Na integracao real, a portaria chamara ${unit.label}.`)
+              ? handleGatehouseToUnitCall(unit.id, unit.label)
               : Alert.alert('Unidade bloqueada', 'Esta unidade nao recebe chamadas no momento.')
           }
         />
       </View>
     </Card>
   );
+}
+
+async function handleGatehouseToUnitCall(unitId: string, unitLabel: string) {
+  try {
+    const call = await startGatehouseToUnitCall(unitId);
+    Alert.alert('Chamada iniciada', `${unitLabel} esta tocando. Status: ${call.status}.`);
+  } catch (err) {
+    Alert.alert('Nao foi possivel chamar', err instanceof Error ? err.message : 'Tente novamente.');
+  }
 }
 
 const styles = StyleSheet.create({

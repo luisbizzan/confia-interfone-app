@@ -37,7 +37,6 @@ Construir o MVP mobile do Confia Interfone Digital em React Native, validando o 
 - Publicacao nas lojas.
 - Push notification em producao.
 - CallKit/ConnectionService.
-- Chamada real de morador para outra unidade; exige nova RPC no backend.
 
 ## Proximas fases
 

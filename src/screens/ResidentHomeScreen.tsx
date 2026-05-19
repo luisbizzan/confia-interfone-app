@@ -3,6 +3,7 @@ import { Alert, StyleSheet, Text, View } from 'react-native';
 import { Card } from '../components/Card';
 import { PrimaryButton } from '../components/PrimaryButton';
 import { demoCalls, demoUnits } from '../data/demo-data';
+import { startResidentToGatehouseCall, startResidentToUnitCall } from '../services/calls';
 import { theme } from '../theme/theme';
 import type { AuthenticatedUser, CallRecord, UnitDirectoryItem, UserContext } from '../types/domain';
 
@@ -14,6 +15,7 @@ type ResidentHomeScreenProps = {
 
 export function ResidentHomeScreen({ context, directoryUnits, user }: ResidentHomeScreenProps) {
   const myUnits = context.unit_members.map((member) => formatUnitLabel(member.unit));
+  const originUnit = context.unit_members.find((member) => member.active_for_calls && member.can_make_calls);
   const units = directoryUnits.length > 0 ? directoryUnits : myUnits.length > 0 ? buildUnitsFromContext(context) : demoUnits;
 
   return (
@@ -29,7 +31,12 @@ export function ResidentHomeScreen({ context, directoryUnits, user }: ResidentHo
       <Card>
         <Text style={styles.sectionTitle}>Acoes rapidas</Text>
         <View style={styles.actions}>
-          <PrimaryButton label="Chamar portaria" onPress={() => showCallDraft('Portaria')} />
+          <PrimaryButton
+            label="Chamar portaria"
+            onPress={() =>
+              originUnit?.unit_id ? handleResidentToGatehouseCall(originUnit.unit_id) : showInfo('Nenhuma unidade liberada para iniciar chamadas.')
+            }
+          />
           <PrimaryButton label="Ver historico" tone="neutral" onPress={() => showInfo('Historico completo entra nesta fase.')} />
         </View>
       </Card>
@@ -38,7 +45,7 @@ export function ResidentHomeScreen({ context, directoryUnits, user }: ResidentHo
         <Text style={styles.sectionTitle}>Unidades do condominio</Text>
         <View style={styles.list}>
           {units.map((unit) => (
-            <UnitCard key={unit.id} unit={unit} />
+            <UnitCard key={unit.id} originUnitId={originUnit?.unit_id ?? null} unit={unit} />
           ))}
         </View>
       </View>
@@ -63,7 +70,9 @@ function formatUnitLabel(unit: UserContext['unit_members'][number]['unit']) {
   return [unit.block, unit.number].filter(Boolean).join(' - ');
 }
 
-function UnitCard({ unit }: { unit: UnitDirectoryItem }) {
+function UnitCard({ originUnitId, unit }: { originUnitId: string | null; unit: UnitDirectoryItem }) {
+  const isOwnUnit = originUnitId === unit.id;
+
   return (
     <Card>
       <View style={styles.rowBetween}>
@@ -79,8 +88,12 @@ function UnitCard({ unit }: { unit: UnitDirectoryItem }) {
       <View style={styles.cardAction}>
         <PrimaryButton
           label="Chamar unidade"
-          tone={unit.canReceiveCalls ? 'primary' : 'neutral'}
-          onPress={() => (unit.canReceiveCalls ? showCallDraft(unit.label) : showInfo('Esta unidade nao recebe chamadas no momento.'))}
+          tone={unit.canReceiveCalls && !isOwnUnit ? 'primary' : 'neutral'}
+          onPress={() =>
+            unit.canReceiveCalls && originUnitId && !isOwnUnit
+              ? handleResidentToUnitCall(originUnitId, unit.id, unit.label)
+              : showInfo(isOwnUnit ? 'Esta e a sua propria unidade.' : 'Esta unidade nao recebe chamadas no momento.')
+          }
         />
       </View>
     </Card>
@@ -107,12 +120,26 @@ function CallHistory({ calls }: { calls: CallRecord[] }) {
   );
 }
 
-function showCallDraft(target: string) {
-  Alert.alert('Chamada preparada', `Na integracao real, o app criara uma chamada para ${target}.`);
-}
-
 function showInfo(message: string) {
   Alert.alert('Confia', message);
+}
+
+async function handleResidentToGatehouseCall(unitId: string) {
+  try {
+    const call = await startResidentToGatehouseCall(unitId);
+    Alert.alert('Chamada iniciada', `Portaria esta tocando. Status: ${call.status}.`);
+  } catch (err) {
+    Alert.alert('Nao foi possivel chamar', err instanceof Error ? err.message : 'Tente novamente.');
+  }
+}
+
+async function handleResidentToUnitCall(originUnitId: string, targetUnitId: string, targetLabel: string) {
+  try {
+    const call = await startResidentToUnitCall(originUnitId, targetUnitId);
+    Alert.alert('Chamada iniciada', `${targetLabel} esta tocando. Status: ${call.status}.`);
+  } catch (err) {
+    Alert.alert('Nao foi possivel chamar', err instanceof Error ? err.message : 'Tente novamente.');
+  }
 }
 
 function callStatusLabel(status: CallRecord['status']) {
