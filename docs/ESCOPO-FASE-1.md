@@ -168,6 +168,20 @@ Commit: `Add automatic call refresh`
 - Esta solucao usa polling curto como etapa intermediaria da Fase 1.
 - Supabase Realtime continua previsto como evolucao posterior.
 
+### 10. Diretorio de unidades com disponibilidade real
+
+Commit: `Add operational unit directory`
+
+- App passa a carregar unidades junto com `unit_members`.
+- Cada unidade passa a informar se tem morador ativo apto a receber chamadas.
+- Botao `Chamar unidade` so fica habilitado quando existe pelo menos um morador ativo com:
+  - `active_for_calls = true`
+  - `can_receive_calls = true`
+- Lista de unidades passa a mostrar:
+  - quantidade de moradores ativos;
+  - ou mensagem `Sem morador ativo para chamadas`.
+- Isso reduz erros de backend ao tentar ligar para unidade sem morador disponivel.
+
 ## Contratos de backend usados pelo app
 
 - `get_current_user_context()`
@@ -283,12 +297,12 @@ Concluido:
 - Painel de chamada em andamento.
 - Encerramento explicito via `end_call`.
 - Atualizacao automatica por polling.
+- Diretorio de unidades com disponibilidade real para chamadas.
 - Documentacao de seguranca inicial.
 
 Pendente dentro da Fase 1:
 
 - Evoluir polling para Supabase Realtime.
-- Melhorar labels de origem/destino quando existirem varias unidades e moradores.
 - Teste completo de morador para outra unidade com duas unidades reais.
 
 ## Proximas fases do app
@@ -345,4 +359,5 @@ Escopo previsto:
 - O app ainda nao tem voz real; as chamadas atuais sao estados transacionais no backend.
 - O historico e as chamadas pendentes atualizam automaticamente por polling curto na Fase 1.
 - Para testar chamada entre moradores, e necessario cadastrar uma segunda unidade com morador ativo no backoffice.
+- O app ja bloqueia unidades sem morador ativo para receber chamadas.
 - O backoffice continua sendo responsavel por criar condominios, portaria, unidades e moradores.

@@ -59,6 +59,7 @@ Fluxos prioritarios:
 - morador chama outra unidade do mesmo condominio;
 - historico atualiza apos as chamadas;
 - morador nao consegue chamar a propria unidade;
+- unidade sem morador ativo aparece bloqueada para chamada;
 - usuario sem perfil operacional recebe erro/bloqueio.
 
 ## Fora do escopo do Playwright
@@ -272,6 +273,7 @@ Testes:
 - usuario sem perfil nao entra;
 - usuario inativo nao opera chamadas;
 - unidade sem morador ativo nao recebe chamada;
+- botao `Chamar unidade` fica desabilitado para unidade sem morador ativo;
 - app nao mostra unidade de outro condominio.
 
 ## Seletores e estabilidade
@@ -289,6 +291,7 @@ resident-refresh-calls
 resident-pending-call-answer
 resident-active-call-end
 resident-active-call-auto-refresh
+resident-unit-unavailable
 gatehouse-call-unit
 gatehouse-pending-call-answer
 gatehouse-active-call-end
@@ -363,4 +366,5 @@ A estrategia inicial sera considerada pronta quando conseguirmos rodar, de forma
 - chamada morador para outra unidade;
 - atendimento e encerramento de chamada;
 - atualizacao automatica entre duas sessoes abertas;
+- bloqueio visual de unidade sem morador ativo;
 - validacao de historico.

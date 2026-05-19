@@ -53,6 +53,7 @@ export type UserContext = {
 };
 
 export type UnitDirectoryItem = {
+  activeResidentsCount?: number;
   id: string;
   label: string;
   type: string;

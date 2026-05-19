@@ -118,6 +118,7 @@ function buildUnitsFromContext(context: UserContext): UnitDirectoryItem[] {
     id: member.unit.id,
     label: formatUnitLabel(member.unit),
     type: member.unit.type === 'HOUSE' ? 'Casa' : 'Apartamento',
+    activeResidentsCount: member.active_for_calls && member.can_receive_calls ? 1 : 0,
     residents: [member.member_type === 'RESIDENT' ? 'Morador autorizado' : member.member_type],
     canReceiveCalls: member.can_receive_calls,
     canMakeCalls: member.can_make_calls,

@@ -125,7 +125,7 @@ async function loadDirectoryUnits(): Promise<UnitDirectoryItem[]> {
 
   const { data, error } = await supabase
     .from('units')
-    .select('id,type,block,number')
+    .select('id,type,block,number,unit_members(id,member_type,active_for_calls,can_receive_calls,can_make_calls)')
     .order('block', { ascending: true, nullsFirst: true })
     .order('number', { ascending: true });
 
@@ -133,12 +133,19 @@ async function loadDirectoryUnits(): Promise<UnitDirectoryItem[]> {
     return [];
   }
 
-  return data.map((unit) => ({
-    id: unit.id,
-    label: [unit.block, unit.number].filter(Boolean).join(' - '),
-    type: unit.type === 'HOUSE' ? 'Casa' : 'Apartamento',
-    residents: ['Unidade do condominio'],
-    canReceiveCalls: true,
-    canMakeCalls: true,
-  }));
+  return data.map((unit) => {
+    const members = Array.isArray(unit.unit_members) ? unit.unit_members : [];
+    const activeReceivers = members.filter((member) => member.active_for_calls && member.can_receive_calls);
+    const activeCallers = members.filter((member) => member.active_for_calls && member.can_make_calls);
+
+    return {
+      activeResidentsCount: activeReceivers.length,
+      id: unit.id,
+      label: [unit.block, unit.number].filter(Boolean).join(' - '),
+      type: unit.type === 'HOUSE' ? 'Casa' : 'Apartamento',
+      residents: [activeReceivers.length > 0 ? `${activeReceivers.length} morador(es) ativo(s)` : 'Sem morador ativo para chamadas'],
+      canReceiveCalls: activeReceivers.length > 0,
+      canMakeCalls: activeCallers.length > 0,
+    };
+  });
 }
