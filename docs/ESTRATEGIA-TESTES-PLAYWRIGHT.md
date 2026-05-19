@@ -1,0 +1,351 @@
+# Estrategia de Testes com Playwright
+
+## Objetivo
+
+Criar uma suite de testes E2E para validar os fluxos principais do Confia Interfone Digital, cobrindo o backoffice web e o app em modo web.
+
+O objetivo inicial nao e testar todos os detalhes visuais, mas garantir que os processos criticos funcionem de ponta a ponta:
+
+- cadastro operacional no backoffice;
+- login de portaria e morador no app;
+- criacao e atendimento de chamadas;
+- historico;
+- regras de permissao e isolamento por condominio.
+
+## Escopo da automacao
+
+### Backoffice web
+
+Playwright e a ferramenta principal para o backoffice.
+
+Fluxos prioritarios:
+
+- login como `ADMIN`;
+- login como `CONSULTOR`;
+- criar condominio com usuario/dispositivo da portaria;
+- criar unidade padrao no onboarding do condominio;
+- criar unidade adicional;
+- criar morador vinculado a unidade;
+- validar listagem de condominios;
+- validar listagem de unidades;
+- validar listagem de moradores;
+- validar tela de portaria;
+- validar tela de chamadas;
+- validar tela de configuracoes/health check;
+- validar regras de permissao:
+  - `CONSULTOR` pode criar;
+  - exclusoes futuras devem exigir `ADMIN`.
+
+### App em modo web
+
+Como o app usa Expo e React Native Web, Playwright pode validar os principais fluxos do app rodando no navegador.
+
+Fluxos prioritarios:
+
+- login como portaria;
+- login como morador;
+- identificacao automatica de perfil;
+- morador chama portaria;
+- portaria ve chamada pendente;
+- portaria atende chamada;
+- portaria chama unidade;
+- morador ve chamada pendente;
+- morador atende chamada;
+- morador chama outra unidade do mesmo condominio;
+- historico atualiza apos as chamadas;
+- morador nao consegue chamar a propria unidade;
+- usuario sem perfil operacional recebe erro/bloqueio.
+
+## Fora do escopo do Playwright
+
+Playwright nao deve ser a ferramenta principal para testar app nativo Android/iOS.
+
+Para app nativo, ferramentas candidatas:
+
+- Maestro;
+- Detox;
+- Appium.
+
+Na primeira etapa, Playwright cobre o app pelo modo web. Depois, quando houver voz real, push e background, sera necessario complementar com testes mobile nativos.
+
+## Estrutura sugerida
+
+Pode ser criado um novo projeto de testes, por exemplo:
+
+```text
+confia-interfone-tests/
+  package.json
+  playwright.config.ts
+  tests/
+    backoffice/
+      auth.spec.ts
+      condominium-onboarding.spec.ts
+      units-residents.spec.ts
+      calls-dashboard.spec.ts
+      settings-health.spec.ts
+    app/
+      login-profile.spec.ts
+      resident-calls.spec.ts
+      gatehouse-calls.spec.ts
+      call-history.spec.ts
+      permissions.spec.ts
+  fixtures/
+    users.ts
+    test-data.ts
+  helpers/
+    backoffice.ts
+    app.ts
+    supabase.ts
+    test-run.ts
+```
+
+Alternativas:
+
+- manter os testes dentro do repo `confia-interfone-digital`, se o foco inicial for backoffice;
+- manter os testes dentro do repo `confia-interfone-app`, se o foco inicial for app;
+- criar um terceiro repo `confia-interfone-tests`, se quisermos isolar QA/E2E dos produtos.
+
+Recomendacao inicial: criar um terceiro repo ou uma pasta dedicada, porque os testes vao orquestrar backoffice, app e Supabase ao mesmo tempo.
+
+## Ambientes
+
+### Local
+
+Backoffice:
+
+```powershell
+cd C:\Projetos\Confia\repo-github\apps\admin-web
+npm run dev
+```
+
+App:
+
+```powershell
+cd C:\Projetos\Confia\confia-interfone-app
+npx expo start -c --web
+```
+
+Playwright:
+
+```powershell
+npm run test:e2e
+```
+
+### Homologacao
+
+Usar URLs publicadas:
+
+- Backoffice Vercel;
+- App web, quando publicado;
+- Supabase remoto de homologacao.
+
+### Producao
+
+Rodar somente smoke tests seguros:
+
+- carregar login;
+- health check;
+- login de usuario demo;
+- leitura de listagens;
+- nao criar massa operacional permanente sem limpeza.
+
+## Variaveis de ambiente dos testes
+
+Exemplo:
+
+```text
+BACKOFFICE_URL=http://localhost:3000
+APP_URL=http://localhost:8081
+BACKOFFICE_ADMIN_EMAIL=admin@example.com
+BACKOFFICE_ADMIN_PASSWORD=senha
+BACKOFFICE_CONSULTOR_EMAIL=consultor@example.com
+BACKOFFICE_CONSULTOR_PASSWORD=senha
+SUPABASE_URL=https://uvdwoisdcikzhqjwbhog.supabase.co
+SUPABASE_ANON_KEY=<publishable-ou-anon-key>
+TEST_RUN_PREFIX=E2E
+```
+
+Nao colocar nos testes:
+
+- `service_role_key`;
+- `ADMIN_API_SECRET`;
+- senhas reais de cliente;
+- segredos de producao.
+
+Se for necessario criar/limpar dados por API administrativa, preferir ambiente de homologacao ou usar secrets protegidos no CI.
+
+## Estrategia de dados
+
+Cada execucao deve criar dados com prefixo unico:
+
+```text
+E2E-20260518-2230
+```
+
+Exemplo de massa:
+
+- Condominio: `E2E Condominio 20260518-2230`
+- Portaria: `e2e-portaria-20260518-2230@confia.test`
+- Morador A1: `e2e-a1-20260518-2230@confia.test`
+- Morador A2: `e2e-a2-20260518-2230@confia.test`
+- Unidade A-1
+- Unidade A-2
+
+Fluxo recomendado:
+
+1. Criar condominio pelo backoffice.
+2. Criar portaria no mesmo fluxo.
+3. Criar unidade A-1.
+4. Criar morador A-1.
+5. Criar unidade A-2.
+6. Criar morador A-2.
+7. Rodar fluxos de chamada.
+8. Validar historico.
+
+Limpeza:
+
+- MVP: manter massa de teste identificada por prefixo.
+- Fase posterior: criar rotina segura de limpeza no ambiente de homologacao.
+
+## Plano de suites
+
+### Suite 1 - Smoke
+
+Objetivo: validar que os sistemas sobem e as rotas principais respondem.
+
+Testes:
+
+- backoffice abre tela de login;
+- app abre tela de login;
+- backoffice faz login;
+- app faz login como portaria;
+- app faz login como morador;
+- configuracoes/health esta operacional.
+
+### Suite 2 - Backoffice operacional
+
+Objetivo: validar cadastro e manutencao dos dados usados pelo app.
+
+Testes:
+
+- criar condominio com portaria;
+- criar unidade padrao;
+- criar unidade adicional;
+- criar morador;
+- validar portaria vinculada;
+- validar unidades e moradores nas listagens.
+
+### Suite 3 - App operacional
+
+Objetivo: validar chamadas sem voz real.
+
+Testes:
+
+- morador A-1 chama portaria;
+- portaria ve chamada pendente;
+- portaria atende;
+- historico mostra chamada atendida;
+- portaria chama A-1;
+- morador A-1 ve chamada pendente;
+- morador A-1 atende;
+- morador A-1 chama A-2;
+- morador A-2 ve chamada pendente;
+- morador A-2 atende.
+
+### Suite 4 - Regras negativas
+
+Objetivo: validar bloqueios esperados.
+
+Testes:
+
+- morador nao chama a propria unidade;
+- usuario sem perfil nao entra;
+- usuario inativo nao opera chamadas;
+- unidade sem morador ativo nao recebe chamada;
+- app nao mostra unidade de outro condominio.
+
+## Seletores e estabilidade
+
+Para Playwright ficar robusto, o ideal e adicionar `testID` ou `accessibilityLabel` nos componentes principais.
+
+Padrao sugerido:
+
+```text
+login-email
+login-password
+login-submit
+resident-call-gatehouse
+resident-refresh-calls
+resident-pending-call-answer
+gatehouse-call-unit
+gatehouse-pending-call-answer
+call-history-list
+```
+
+No web, React Native pode expor esses atributos de forma diferente. Devemos validar e padronizar antes de escrever muitos testes.
+
+## Comandos sugeridos
+
+```json
+{
+  "scripts": {
+    "test:e2e": "playwright test",
+    "test:e2e:headed": "playwright test --headed",
+    "test:e2e:ui": "playwright test --ui",
+    "test:e2e:smoke": "playwright test tests/smoke"
+  }
+}
+```
+
+## CI/CD
+
+GitHub Actions recomendado:
+
+- instalar dependencias;
+- instalar browsers do Playwright;
+- subir app/backoffice quando o teste for local;
+- ou apontar para URLs de homologacao;
+- rodar smoke tests em pull requests;
+- rodar suite completa em agendamento ou manual dispatch.
+
+Fases de CI:
+
+1. Smoke em PR.
+2. Suite operacional em merge para `main`.
+3. Suite completa manual antes de demonstracoes ou releases.
+
+## Riscos e cuidados
+
+- Testes E2E podem criar dados duplicados se nao houver estrategia de limpeza.
+- Testes em producao devem ser limitados e seguros.
+- Fluxos com chamadas dependem de estado e podem falhar se houver chamadas antigas tocando.
+- Quando entrar voz real, Playwright nao sera suficiente para validar audio nativo.
+- Push notification e background exigirao teste nativo.
+
+## Recomendacao de implementacao
+
+Ordem sugerida:
+
+1. Criar projeto base Playwright.
+2. Criar smoke tests do backoffice.
+3. Criar smoke tests do app.
+4. Adicionar seletores estaveis no app/backoffice.
+5. Automatizar criacao de condominio, portaria, unidades e moradores.
+6. Automatizar fluxo morador -> portaria.
+7. Automatizar fluxo portaria -> unidade.
+8. Automatizar fluxo morador -> unidade.
+9. Levar smoke tests para GitHub Actions.
+10. Evoluir suite completa em ambiente de homologacao.
+
+## Criterio de sucesso
+
+A estrategia inicial sera considerada pronta quando conseguirmos rodar, de forma repetivel:
+
+- login no backoffice;
+- cadastro completo de condominio com portaria;
+- cadastro de duas unidades com moradores;
+- login no app como portaria e morador;
+- chamada morador para portaria;
+- chamada portaria para unidade;
+- chamada morador para outra unidade;
+- validacao de historico.
