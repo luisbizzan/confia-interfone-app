@@ -22,7 +22,8 @@ Construir o MVP mobile do Confia Interfone Digital em React Native, validando o 
 
 - Projeto React Native com Expo e TypeScript.
 - Tema visual inicial do Confia.
-- Tela de entrada simulando perfis de morador e portaria.
+- Login real com Supabase Auth.
+- Identificacao automatica de perfil pelo RPC `get_current_user_context`.
 - Home do morador com chamada para portaria e unidades.
 - Home da portaria com status do dispositivo e chamada para unidades.
 - Estrutura inicial para Supabase Auth.
@@ -36,6 +37,7 @@ Construir o MVP mobile do Confia Interfone Digital em React Native, validando o 
 - Publicacao nas lojas.
 - Push notification em producao.
 - CallKit/ConnectionService.
+- Chamada real de morador para outra unidade; exige nova RPC no backend.
 
 ## Proximas fases
 

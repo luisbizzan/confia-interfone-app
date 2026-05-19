@@ -4,19 +4,26 @@ import { Card } from '../components/Card';
 import { PrimaryButton } from '../components/PrimaryButton';
 import { demoCalls, demoUnits } from '../data/demo-data';
 import { theme } from '../theme/theme';
-import type { AuthenticatedUser, CallRecord, UnitDirectoryItem } from '../types/domain';
+import type { AuthenticatedUser, CallRecord, UnitDirectoryItem, UserContext } from '../types/domain';
 
 type ResidentHomeScreenProps = {
+  context: UserContext;
+  directoryUnits: UnitDirectoryItem[];
   user: AuthenticatedUser;
 };
 
-export function ResidentHomeScreen({ user }: ResidentHomeScreenProps) {
+export function ResidentHomeScreen({ context, directoryUnits, user }: ResidentHomeScreenProps) {
+  const myUnits = context.unit_members.map((member) => formatUnitLabel(member.unit));
+  const units = directoryUnits.length > 0 ? directoryUnits : myUnits.length > 0 ? buildUnitsFromContext(context) : demoUnits;
+
   return (
     <View style={styles.screen}>
       <View>
         <Text style={styles.eyebrow}>Modo morador</Text>
         <Text style={styles.title}>Ola, {user.name}</Text>
-        <Text style={styles.description}>Ligue para a portaria ou para outra unidade do mesmo condominio.</Text>
+        <Text style={styles.description}>
+          {myUnits.length > 0 ? `Unidade vinculada: ${myUnits.join(', ')}` : 'Ligue para a portaria ou para outra unidade do mesmo condominio.'}
+        </Text>
       </View>
 
       <Card>
@@ -30,7 +37,7 @@ export function ResidentHomeScreen({ user }: ResidentHomeScreenProps) {
       <View style={styles.section}>
         <Text style={styles.sectionTitle}>Unidades do condominio</Text>
         <View style={styles.list}>
-          {demoUnits.map((unit) => (
+          {units.map((unit) => (
             <UnitCard key={unit.id} unit={unit} />
           ))}
         </View>
@@ -39,6 +46,21 @@ export function ResidentHomeScreen({ user }: ResidentHomeScreenProps) {
       <CallHistory calls={demoCalls} />
     </View>
   );
+}
+
+function buildUnitsFromContext(context: UserContext): UnitDirectoryItem[] {
+  return context.unit_members.map((member) => ({
+    id: member.unit.id,
+    label: formatUnitLabel(member.unit),
+    type: member.unit.type === 'HOUSE' ? 'Casa' : 'Apartamento',
+    residents: [member.member_type === 'RESIDENT' ? 'Morador autorizado' : member.member_type],
+    canReceiveCalls: member.can_receive_calls,
+    canMakeCalls: member.can_make_calls,
+  }));
+}
+
+function formatUnitLabel(unit: UserContext['unit_members'][number]['unit']) {
+  return [unit.block, unit.number].filter(Boolean).join(' - ');
 }
 
 function UnitCard({ unit }: { unit: UnitDirectoryItem }) {

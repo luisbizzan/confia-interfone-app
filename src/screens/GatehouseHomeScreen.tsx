@@ -4,14 +4,18 @@ import { Card } from '../components/Card';
 import { PrimaryButton } from '../components/PrimaryButton';
 import { demoCalls, demoUnits } from '../data/demo-data';
 import { theme } from '../theme/theme';
-import type { AuthenticatedUser, UnitDirectoryItem } from '../types/domain';
+import type { AuthenticatedUser, UnitDirectoryItem, UserContext } from '../types/domain';
 
 type GatehouseHomeScreenProps = {
+  context: UserContext;
+  directoryUnits: UnitDirectoryItem[];
   user: AuthenticatedUser;
 };
 
-export function GatehouseHomeScreen({ user }: GatehouseHomeScreenProps) {
+export function GatehouseHomeScreen({ context, directoryUnits, user }: GatehouseHomeScreenProps) {
   const ringingCalls = demoCalls.filter((call) => call.status === 'ringing').length;
+  const activeDevice = context.portaria_devices.find((device) => device.is_active);
+  const units = directoryUnits.length > 0 ? directoryUnits : demoUnits;
 
   return (
     <View style={styles.screen}>
@@ -25,7 +29,7 @@ export function GatehouseHomeScreen({ user }: GatehouseHomeScreenProps) {
 
       <View style={styles.stats}>
         <Card>
-          <Text style={styles.statValue}>{demoUnits.length}</Text>
+          <Text style={styles.statValue}>{units.length}</Text>
           <Text style={styles.statLabel}>Unidades</Text>
         </Card>
         <Card>
@@ -39,11 +43,11 @@ export function GatehouseHomeScreen({ user }: GatehouseHomeScreenProps) {
         <Card>
           <View style={styles.rowBetween}>
             <View style={styles.flex}>
-              <Text style={styles.itemTitle}>Portaria principal</Text>
-              <Text style={styles.itemMeta}>Recebe chamadas: Sim</Text>
-              <Text style={styles.itemMeta}>Liga para unidades: Sim</Text>
+              <Text style={styles.itemTitle}>{activeDevice?.name ?? 'Portaria principal'}</Text>
+              <Text style={styles.itemMeta}>Recebe chamadas: {activeDevice?.can_receive_calls === false ? 'Nao' : 'Sim'}</Text>
+              <Text style={styles.itemMeta}>Liga para unidades: {activeDevice?.can_make_calls === false ? 'Nao' : 'Sim'}</Text>
             </View>
-            <Text style={styles.badge}>Ativo</Text>
+            <Text style={styles.badge}>{activeDevice ? 'Ativo' : 'Sem vinculo'}</Text>
           </View>
         </Card>
       </View>
@@ -51,7 +55,7 @@ export function GatehouseHomeScreen({ user }: GatehouseHomeScreenProps) {
       <View style={styles.section}>
         <Text style={styles.sectionTitle}>Unidades</Text>
         <View style={styles.list}>
-          {demoUnits.map((unit) => (
+          {units.map((unit) => (
             <GatehouseUnitCard key={unit.id} unit={unit} />
           ))}
         </View>
