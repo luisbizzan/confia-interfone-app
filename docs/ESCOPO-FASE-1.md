@@ -142,7 +142,7 @@ Commit: `Add pending call handling`
 
 ### 8. Chamada em andamento e encerramento
 
-Commit: pendente de publicacao.
+Commit: `30b6249 Add active call end flow`
 
 - Backend ajustado para manter chamadas atendidas abertas:
   - `answer_call` grava `status = ANSWERED`, `answered_at` e mantem `ended_at = null`.
@@ -156,6 +156,17 @@ Commit: pendente de publicacao.
   - `Encerrar chamada`
 - Encerramento usa o RPC:
   - `end_call`
+
+### 9. Atualizacao automatica de chamadas
+
+Commit: `Add automatic call refresh`
+
+- Morador passa a atualizar historico e chamadas pendentes automaticamente a cada 5 segundos.
+- Portaria passa a atualizar historico e chamadas pendentes automaticamente a cada 5 segundos.
+- Quando a portaria atende uma chamada iniciada pelo morador, a tela do morador passa a refletir o status `ANSWERED` sem exigir clique em `Atualizar chamadas`.
+- A tela de `Chamada em andamento` aparece automaticamente para as duas pontas depois da proxima atualizacao.
+- Esta solucao usa polling curto como etapa intermediaria da Fase 1.
+- Supabase Realtime continua previsto como evolucao posterior.
 
 ## Contratos de backend usados pelo app
 
@@ -271,11 +282,12 @@ Concluido:
 - Cancelamento de chamadas tocando.
 - Painel de chamada em andamento.
 - Encerramento explicito via `end_call`.
+- Atualizacao automatica por polling.
 - Documentacao de seguranca inicial.
 
 Pendente dentro da Fase 1:
 
-- Atualizacao automatica ou realtime.
+- Evoluir polling para Supabase Realtime.
 - Melhorar labels de origem/destino quando existirem varias unidades e moradores.
 - Teste completo de morador para outra unidade com duas unidades reais.
 
@@ -331,6 +343,6 @@ Escopo previsto:
 ## Observacoes importantes
 
 - O app ainda nao tem voz real; as chamadas atuais sao estados transacionais no backend.
-- O historico atual depende de atualizacao manual.
+- O historico e as chamadas pendentes atualizam automaticamente por polling curto na Fase 1.
 - Para testar chamada entre moradores, e necessario cadastrar uma segunda unidade com morador ativo no backoffice.
 - O backoffice continua sendo responsavel por criar condominios, portaria, unidades e moradores.

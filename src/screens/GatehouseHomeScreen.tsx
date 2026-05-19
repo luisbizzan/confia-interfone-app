@@ -14,6 +14,8 @@ type GatehouseHomeScreenProps = {
   user: AuthenticatedUser;
 };
 
+const CALL_REFRESH_INTERVAL_MS = 5000;
+
 export function GatehouseHomeScreen({ context, directoryUnits, user }: GatehouseHomeScreenProps) {
   const activeDevice = context.portaria_devices.find((device) => device.is_active);
   const units = directoryUnits.length > 0 ? directoryUnits : demoUnits;
@@ -26,6 +28,12 @@ export function GatehouseHomeScreen({ context, directoryUnits, user }: Gatehouse
 
   useEffect(() => {
     refreshGatehouseData(unitLabels, setHistory, setPendingCalls, setFeedback);
+
+    const interval = setInterval(() => {
+      refreshGatehouseData(unitLabels, setHistory, setPendingCalls, setFeedback, { silent: true });
+    }, CALL_REFRESH_INTERVAL_MS);
+
+    return () => clearInterval(interval);
   }, [unitLabels]);
 
   return (
@@ -233,8 +241,12 @@ async function refreshGatehouseData(
   setHistory: (history: CallRecord[]) => void,
   setPendingCalls: (calls: PendingPortariaCall[]) => void,
   setFeedback: (message: string | null) => void,
+  options?: { silent?: boolean },
 ) {
-  await Promise.all([refreshHistory(unitLabels, setHistory, setFeedback), refreshPendingCalls(setPendingCalls, setFeedback)]);
+  await Promise.all([
+    refreshHistory(unitLabels, setHistory, setFeedback, options),
+    refreshPendingCalls(setPendingCalls, setFeedback, options),
+  ]);
 }
 
 async function handleGatehouseToUnitCall(
@@ -314,21 +326,30 @@ async function refreshHistory(
   unitLabels: Map<string, string>,
   setHistory: (history: CallRecord[]) => void,
   setFeedback: (message: string | null) => void,
+  options?: { silent?: boolean },
 ) {
   try {
     const calls = await getMyCallHistory();
     setHistory(calls.map((call) => mapBackendCall(call, unitLabels)));
   } catch (err) {
-    setFeedback(`Nao foi possivel carregar o historico: ${err instanceof Error ? err.message : 'Tente novamente.'}`);
+    if (!options?.silent) {
+      setFeedback(`Nao foi possivel carregar o historico: ${err instanceof Error ? err.message : 'Tente novamente.'}`);
+    }
   }
 }
 
-async function refreshPendingCalls(setPendingCalls: (calls: PendingPortariaCall[]) => void, setFeedback: (message: string | null) => void) {
+async function refreshPendingCalls(
+  setPendingCalls: (calls: PendingPortariaCall[]) => void,
+  setFeedback: (message: string | null) => void,
+  options?: { silent?: boolean },
+) {
   try {
     const calls = await getMyPendingCalls();
     setPendingCalls(calls.portaria_calls ?? []);
   } catch (err) {
-    setFeedback(`Nao foi possivel carregar chamadas recebidas: ${err instanceof Error ? err.message : 'Tente novamente.'}`);
+    if (!options?.silent) {
+      setFeedback(`Nao foi possivel carregar chamadas recebidas: ${err instanceof Error ? err.message : 'Tente novamente.'}`);
+    }
   }
 }
 

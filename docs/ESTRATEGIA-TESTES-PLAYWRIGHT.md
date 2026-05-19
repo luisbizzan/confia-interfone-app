@@ -50,6 +50,7 @@ Fluxos prioritarios:
 - portaria atende chamada;
 - portaria ve chamada em andamento;
 - portaria encerra chamada;
+- morador ve automaticamente a chamada em andamento apos atendimento da portaria;
 - portaria chama unidade;
 - morador ve chamada pendente;
 - morador atende chamada;
@@ -249,6 +250,7 @@ Testes:
 - portaria ve chamada pendente;
 - portaria atende;
 - portaria ve painel de chamada em andamento;
+- morador A-1 ve painel de chamada em andamento sem clicar em atualizar;
 - portaria encerra chamada;
 - historico mostra chamada atendida;
 - portaria chama A-1;
@@ -286,6 +288,7 @@ resident-call-gatehouse
 resident-refresh-calls
 resident-pending-call-answer
 resident-active-call-end
+resident-active-call-auto-refresh
 gatehouse-call-unit
 gatehouse-pending-call-answer
 gatehouse-active-call-end
@@ -359,4 +362,5 @@ A estrategia inicial sera considerada pronta quando conseguirmos rodar, de forma
 - chamada portaria para unidade;
 - chamada morador para outra unidade;
 - atendimento e encerramento de chamada;
+- atualizacao automatica entre duas sessoes abertas;
 - validacao de historico.

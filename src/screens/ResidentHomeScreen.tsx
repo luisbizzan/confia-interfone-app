@@ -22,6 +22,8 @@ type ResidentHomeScreenProps = {
   user: AuthenticatedUser;
 };
 
+const CALL_REFRESH_INTERVAL_MS = 5000;
+
 export function ResidentHomeScreen({ context, directoryUnits, user }: ResidentHomeScreenProps) {
   const myUnits = context.unit_members.map((member) => formatUnitLabel(member.unit));
   const originUnit = context.unit_members.find((member) => member.active_for_calls && member.can_make_calls);
@@ -34,6 +36,12 @@ export function ResidentHomeScreen({ context, directoryUnits, user }: ResidentHo
 
   useEffect(() => {
     refreshResidentData(unitLabels, setHistory, setPendingCalls, setFeedback);
+
+    const interval = setInterval(() => {
+      refreshResidentData(unitLabels, setHistory, setPendingCalls, setFeedback, { silent: true });
+    }, CALL_REFRESH_INTERVAL_MS);
+
+    return () => clearInterval(interval);
   }, [unitLabels]);
 
   return (
@@ -58,7 +66,7 @@ export function ResidentHomeScreen({ context, directoryUnits, user }: ResidentHo
                 return;
               }
 
-              handleResidentToGatehouseCall(originUnit.unit_id, setFeedback, setActiveCallTarget);
+              handleResidentToGatehouseCall(originUnit.unit_id, unitLabels, setHistory, setPendingCalls, setFeedback, setActiveCallTarget);
             }}
           />
           <PrimaryButton
@@ -271,29 +279,42 @@ async function refreshResidentData(
   setHistory: (history: CallRecord[]) => void,
   setPendingCalls: (calls: PendingUnitCall[]) => void,
   setFeedback: (message: string | null) => void,
+  options?: { silent?: boolean },
 ) {
-  await Promise.all([refreshHistory(unitLabels, setHistory, setFeedback), refreshPendingCalls(setPendingCalls, setFeedback)]);
+  await Promise.all([
+    refreshHistory(unitLabels, setHistory, setFeedback, options),
+    refreshPendingCalls(setPendingCalls, setFeedback, options),
+  ]);
 }
 
 async function refreshHistory(
   unitLabels: Map<string, string>,
   setHistory: (history: CallRecord[]) => void,
   setFeedback: (message: string | null) => void,
+  options?: { silent?: boolean },
 ) {
   try {
     const calls = await getMyCallHistory();
     setHistory(calls.map((call) => mapBackendCall(call, unitLabels)));
   } catch (err) {
-    setFeedback(`Nao foi possivel carregar o historico: ${err instanceof Error ? err.message : 'Tente novamente.'}`);
+    if (!options?.silent) {
+      setFeedback(`Nao foi possivel carregar o historico: ${err instanceof Error ? err.message : 'Tente novamente.'}`);
+    }
   }
 }
 
-async function refreshPendingCalls(setPendingCalls: (calls: PendingUnitCall[]) => void, setFeedback: (message: string | null) => void) {
+async function refreshPendingCalls(
+  setPendingCalls: (calls: PendingUnitCall[]) => void,
+  setFeedback: (message: string | null) => void,
+  options?: { silent?: boolean },
+) {
   try {
     const calls = await getMyPendingCalls();
     setPendingCalls(calls.unit_calls ?? []);
   } catch (err) {
-    setFeedback(`Nao foi possivel carregar chamadas recebidas: ${err instanceof Error ? err.message : 'Tente novamente.'}`);
+    if (!options?.silent) {
+      setFeedback(`Nao foi possivel carregar chamadas recebidas: ${err instanceof Error ? err.message : 'Tente novamente.'}`);
+    }
   }
 }
 
@@ -347,6 +368,9 @@ function showInfo(message: string) {
 
 async function handleResidentToGatehouseCall(
   unitId: string,
+  unitLabels: Map<string, string>,
+  setHistory: (history: CallRecord[]) => void,
+  setPendingCalls: (calls: PendingUnitCall[]) => void,
   setFeedback: (message: string | null) => void,
   setActiveCallTarget: (target: string | null) => void,
 ) {
@@ -356,6 +380,7 @@ async function handleResidentToGatehouseCall(
   try {
     const call = await startResidentToGatehouseCall(unitId);
     setFeedback(`Chamada iniciada para a portaria. Status: ${call.status}.`);
+    await refreshResidentData(unitLabels, setHistory, setPendingCalls, setFeedback, { silent: true });
   } catch (err) {
     setFeedback(`Nao foi possivel chamar a portaria: ${err instanceof Error ? err.message : 'Tente novamente.'}`);
   } finally {
