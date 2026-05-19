@@ -64,6 +64,7 @@ export type UnitDirectoryItem = {
 export type CallRecord = {
   id: string;
   direction: CallDirection;
+  endedAt: string | null;
   fromLabel: string;
   toLabel: string;
   status: CallStatus;

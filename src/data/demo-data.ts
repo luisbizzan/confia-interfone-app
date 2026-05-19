@@ -31,6 +31,7 @@ export const demoCalls: CallRecord[] = [
   {
     id: 'call-1',
     direction: 'resident_to_gatehouse',
+    endedAt: 'Hoje, 09:43',
     fromLabel: 'R - 102',
     toLabel: 'Portaria',
     status: 'answered',
@@ -39,6 +40,7 @@ export const demoCalls: CallRecord[] = [
   {
     id: 'call-2',
     direction: 'resident_to_unit',
+    endedAt: 'Hoje, 08:18',
     fromLabel: 'R - 102',
     toLabel: 'R - 201',
     status: 'missed',
@@ -47,6 +49,7 @@ export const demoCalls: CallRecord[] = [
   {
     id: 'call-3',
     direction: 'gatehouse_to_unit',
+    endedAt: null,
     fromLabel: 'Portaria',
     toLabel: 'Casa 305',
     status: 'ringing',

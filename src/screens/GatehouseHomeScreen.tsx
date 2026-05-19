@@ -4,7 +4,7 @@ import { Alert, StyleSheet, Text, View } from 'react-native';
 import { Card } from '../components/Card';
 import { PrimaryButton } from '../components/PrimaryButton';
 import { demoUnits } from '../data/demo-data';
-import { answerGatehouseCall, cancelCall, getMyCallHistory, getMyPendingCalls, startGatehouseToUnitCall } from '../services/calls';
+import { answerGatehouseCall, cancelCall, endCall, getMyCallHistory, getMyPendingCalls, startGatehouseToUnitCall } from '../services/calls';
 import { theme } from '../theme/theme';
 import type { AuthenticatedUser, BackendCallRecord, CallRecord, PendingPortariaCall, UnitDirectoryItem, UserContext } from '../types/domain';
 
@@ -83,6 +83,11 @@ export function GatehouseHomeScreen({ context, directoryUnits, user }: Gatehouse
         calls={pendingCalls}
         onAnswer={(callId) => handleAnswerGatehouseCall(callId, unitLabels, setHistory, setPendingCalls, setFeedback)}
         unitLabels={unitLabels}
+      />
+
+      <ActiveCallsPanel
+        calls={history.filter((call) => call.status === 'ANSWERED' && !call.endedAt)}
+        onEnd={(callId) => handleEndCall(callId, unitLabels, setHistory, setPendingCalls, setFeedback)}
       />
 
       <View style={styles.section}>
@@ -165,6 +170,31 @@ function PendingCallsPanel({
             </Card>
           ))
         )}
+      </View>
+    </View>
+  );
+}
+
+function ActiveCallsPanel({ calls, onEnd }: { calls: CallRecord[]; onEnd: (callId: string) => void }) {
+  if (calls.length === 0) {
+    return null;
+  }
+
+  return (
+    <View style={styles.section}>
+      <Text style={styles.sectionTitle}>Chamada em andamento</Text>
+      <View style={styles.list}>
+        {calls.map((call) => (
+          <Card key={call.id}>
+            <Text style={styles.itemTitle}>
+              {call.fromLabel} para {call.toLabel}
+            </Text>
+            <Text style={styles.itemMeta}>Atendida desde {call.startedAt}</Text>
+            <View style={styles.cardAction}>
+              <PrimaryButton label="Encerrar chamada" tone="danger" onPress={() => onEnd(call.id)} />
+            </View>
+          </Card>
+        ))}
       </View>
     </View>
   );
@@ -262,6 +292,24 @@ async function handleCancelCall(
   }
 }
 
+async function handleEndCall(
+  callId: string,
+  unitLabels: Map<string, string>,
+  setHistory: (history: CallRecord[]) => void,
+  setPendingCalls: (calls: PendingPortariaCall[]) => void,
+  setFeedback: (message: string | null) => void,
+) {
+  setFeedback('Encerrando chamada...');
+
+  try {
+    const call = await endCall(callId);
+    setFeedback(`Chamada encerrada. Status: ${call.status}.`);
+    await refreshGatehouseData(unitLabels, setHistory, setPendingCalls, setFeedback);
+  } catch (err) {
+    setFeedback(`Nao foi possivel encerrar: ${err instanceof Error ? err.message : 'Tente novamente.'}`);
+  }
+}
+
 async function refreshHistory(
   unitLabels: Map<string, string>,
   setHistory: (history: CallRecord[]) => void,
@@ -296,6 +344,7 @@ function mapBackendCall(call: BackendCallRecord, unitLabels: Map<string, string>
         : call.target_type === 'PORTARIA'
           ? 'resident_to_gatehouse'
           : 'resident_to_unit',
+    endedAt: call.ended_at,
     fromLabel: call.origin_type === 'PORTARIA' ? 'Portaria' : originUnit,
     toLabel: call.target_type === 'PORTARIA' ? 'Portaria' : targetUnit,
     status: call.status,

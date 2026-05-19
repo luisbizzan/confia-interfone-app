@@ -48,9 +48,13 @@ Fluxos prioritarios:
 - morador chama portaria;
 - portaria ve chamada pendente;
 - portaria atende chamada;
+- portaria ve chamada em andamento;
+- portaria encerra chamada;
 - portaria chama unidade;
 - morador ve chamada pendente;
 - morador atende chamada;
+- morador ve chamada em andamento;
+- morador encerra chamada;
 - morador chama outra unidade do mesmo condominio;
 - historico atualiza apos as chamadas;
 - morador nao consegue chamar a propria unidade;
@@ -244,10 +248,14 @@ Testes:
 - morador A-1 chama portaria;
 - portaria ve chamada pendente;
 - portaria atende;
+- portaria ve painel de chamada em andamento;
+- portaria encerra chamada;
 - historico mostra chamada atendida;
 - portaria chama A-1;
 - morador A-1 ve chamada pendente;
 - morador A-1 atende;
+- morador A-1 ve painel de chamada em andamento;
+- morador A-1 encerra chamada;
 - morador A-1 chama A-2;
 - morador A-2 ve chamada pendente;
 - morador A-2 atende.
@@ -277,8 +285,10 @@ login-submit
 resident-call-gatehouse
 resident-refresh-calls
 resident-pending-call-answer
+resident-active-call-end
 gatehouse-call-unit
 gatehouse-pending-call-answer
+gatehouse-active-call-end
 call-history-list
 ```
 
@@ -348,4 +358,5 @@ A estrategia inicial sera considerada pronta quando conseguirmos rodar, de forma
 - chamada morador para portaria;
 - chamada portaria para unidade;
 - chamada morador para outra unidade;
+- atendimento e encerramento de chamada;
 - validacao de historico.

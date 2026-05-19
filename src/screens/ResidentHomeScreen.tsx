@@ -7,6 +7,7 @@ import { demoUnits } from '../data/demo-data';
 import {
   answerResidentCall,
   cancelCall,
+  endCall,
   getMyCallHistory,
   getMyPendingCalls,
   startResidentToGatehouseCall,
@@ -73,6 +74,11 @@ export function ResidentHomeScreen({ context, directoryUnits, user }: ResidentHo
         calls={pendingCalls}
         onAnswer={(callId) => handleAnswerResidentCall(callId, user.id, unitLabels, setHistory, setPendingCalls, setFeedback)}
         unitLabels={unitLabels}
+      />
+
+      <ActiveCallsPanel
+        calls={history.filter((call) => call.status === 'ANSWERED' && !call.endedAt)}
+        onEnd={(callId) => handleEndCall(callId, unitLabels, setHistory, setPendingCalls, setFeedback)}
       />
 
       <View style={styles.section}>
@@ -204,6 +210,31 @@ function PendingCallsPanel({
   );
 }
 
+function ActiveCallsPanel({ calls, onEnd }: { calls: CallRecord[]; onEnd: (callId: string) => void }) {
+  if (calls.length === 0) {
+    return null;
+  }
+
+  return (
+    <View style={styles.section}>
+      <Text style={styles.sectionTitle}>Chamada em andamento</Text>
+      <View style={styles.list}>
+        {calls.map((call) => (
+          <Card key={call.id}>
+            <Text style={styles.itemTitle}>
+              {call.fromLabel} para {call.toLabel}
+            </Text>
+            <Text style={styles.itemMeta}>Atendida desde {call.startedAt}</Text>
+            <View style={styles.cardAction}>
+              <PrimaryButton label="Encerrar chamada" tone="danger" onPress={() => onEnd(call.id)} />
+            </View>
+          </Card>
+        ))}
+      </View>
+    </View>
+  );
+}
+
 function CallHistory({ calls, onCancel }: { calls: CallRecord[]; onCancel: (callId: string) => void }) {
   return (
     <View style={styles.section}>
@@ -278,6 +309,7 @@ function mapBackendCall(call: BackendCallRecord, unitLabels: Map<string, string>
         : call.target_type === 'PORTARIA'
           ? 'resident_to_gatehouse'
           : 'resident_to_unit',
+    endedAt: call.ended_at,
     fromLabel: call.origin_type === 'PORTARIA' ? 'Portaria' : originUnit,
     toLabel: call.target_type === 'PORTARIA' ? 'Portaria' : targetUnit,
     status: call.status,
@@ -365,6 +397,24 @@ async function handleCancelCall(
     await refreshResidentData(unitLabels, setHistory, setPendingCalls, setFeedback);
   } catch (err) {
     setFeedback(`Nao foi possivel cancelar: ${err instanceof Error ? err.message : 'Tente novamente.'}`);
+  }
+}
+
+async function handleEndCall(
+  callId: string,
+  unitLabels: Map<string, string>,
+  setHistory: (history: CallRecord[]) => void,
+  setPendingCalls: (calls: PendingUnitCall[]) => void,
+  setFeedback: (message: string | null) => void,
+) {
+  setFeedback('Encerrando chamada...');
+
+  try {
+    const call = await endCall(callId);
+    setFeedback(`Chamada encerrada. Status: ${call.status}.`);
+    await refreshResidentData(unitLabels, setHistory, setPendingCalls, setFeedback);
+  } catch (err) {
+    setFeedback(`Nao foi possivel encerrar: ${err instanceof Error ? err.message : 'Tente novamente.'}`);
   }
 }
 

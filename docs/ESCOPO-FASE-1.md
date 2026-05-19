@@ -140,6 +140,23 @@ Commit: `Add pending call handling`
   - `cancel_call`
 - Atualizacao manual agora recarrega historico e chamadas pendentes.
 
+### 8. Chamada em andamento e encerramento
+
+Commit: pendente de publicacao.
+
+- Backend ajustado para manter chamadas atendidas abertas:
+  - `answer_call` grava `status = ANSWERED`, `answered_at` e mantem `ended_at = null`.
+  - `answer_portaria_call` segue o mesmo comportamento.
+- App passa a identificar chamada em andamento quando:
+  - `status = ANSWERED`
+  - `ended_at = null`
+- Morador ve painel `Chamada em andamento`.
+- Portaria ve painel `Chamada em andamento`.
+- App passa a exibir botao:
+  - `Encerrar chamada`
+- Encerramento usa o RPC:
+  - `end_call`
+
 ## Contratos de backend usados pelo app
 
 - `get_current_user_context()`
@@ -151,9 +168,6 @@ Commit: `Add pending call handling`
 - `answer_call(p_call_id, p_user_id)`
 - `answer_portaria_call(p_call_id)`
 - `cancel_call(p_call_id, p_reason)`
-
-Contratos ja existentes e previstos para proximos passos:
-
 - `end_call(p_call_id, p_reason)`
 
 ## Fluxos validados
@@ -192,6 +206,12 @@ Contratos ja existentes e previstos para proximos passos:
 - Morador consegue atender chamada recebida.
 - Portaria consegue atender chamada recebida.
 - Chamadas tocando podem ser canceladas pelo originador quando permitido pelo backend.
+
+### Chamada em andamento
+
+- Chamadas atendidas aparecem como em andamento enquanto `ended_at` estiver vazio.
+- Morador consegue encerrar chamada em andamento.
+- Portaria consegue encerrar chamada em andamento.
 
 ## Seguranca da Fase 1
 
@@ -249,12 +269,12 @@ Concluido:
 - Chamadas pendentes.
 - Atendimento de chamadas recebidas.
 - Cancelamento de chamadas tocando.
+- Painel de chamada em andamento.
+- Encerramento explicito via `end_call`.
 - Documentacao de seguranca inicial.
 
 Pendente dentro da Fase 1:
 
-- Tela/estado de chamada em andamento.
-- Acao explicita de encerrar chamada via `end_call`.
 - Atualizacao automatica ou realtime.
 - Melhorar labels de origem/destino quando existirem varias unidades e moradores.
 - Teste completo de morador para outra unidade com duas unidades reais.
