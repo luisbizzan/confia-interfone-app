@@ -3,19 +3,21 @@ import { StyleSheet, Text, TouchableOpacity } from 'react-native';
 import { theme } from '../theme/theme';
 
 type PrimaryButtonProps = {
+  disabled?: boolean;
   label: string;
   onPress: () => void;
   tone?: 'primary' | 'danger' | 'neutral';
 };
 
-export function PrimaryButton({ label, onPress, tone = 'primary' }: PrimaryButtonProps) {
+export function PrimaryButton({ disabled = false, label, onPress, tone = 'primary' }: PrimaryButtonProps) {
   return (
     <TouchableOpacity
       accessibilityRole="button"
-      style={[styles.button, tone === 'danger' && styles.danger, tone === 'neutral' && styles.neutral]}
+      disabled={disabled}
+      style={[styles.button, tone === 'danger' && styles.danger, tone === 'neutral' && styles.neutral, disabled && styles.disabled]}
       onPress={onPress}
     >
-      <Text style={[styles.label, tone === 'neutral' && styles.neutralLabel]}>{label}</Text>
+      <Text style={[styles.label, tone === 'neutral' && styles.neutralLabel, disabled && styles.disabledLabel]}>{label}</Text>
     </TouchableOpacity>
   );
 }
@@ -36,6 +38,10 @@ const styles = StyleSheet.create({
     borderColor: theme.colors.border,
     borderWidth: 1,
   },
+  disabled: {
+    backgroundColor: '#e5e7eb',
+    borderColor: '#d1d5db',
+  },
   label: {
     color: '#ffffff',
     fontSize: 16,
@@ -43,5 +49,8 @@ const styles = StyleSheet.create({
   },
   neutralLabel: {
     color: theme.colors.text,
+  },
+  disabledLabel: {
+    color: theme.colors.muted,
   },
 });
