@@ -1,46 +1,290 @@
-# Confia Interfone App - Fase 1
+# Confia Interfone App - Controle da Fase 1
 
-## Objetivo
+## Objetivo da fase
 
-Construir o MVP mobile do Confia Interfone Digital em React Native, validando o fluxo operacional antes da integracao de voz real.
+Construir o MVP mobile do Confia Interfone Digital em React Native, validando login, perfis, diretorio de unidades, fluxo de chamada e historico antes da integracao de voz real.
 
-## Perfis
+## Stack definida
 
-- Portaria: usuario vinculado ao condominio, criado no onboarding do backoffice.
-- Morador: usuario vinculado a uma ou mais unidades do mesmo condominio.
+- React Native com Expo.
+- TypeScript.
+- Supabase Auth para login.
+- Supabase RPCs para regras de negocio.
+- `expo-secure-store` para sessao segura no dispositivo.
+- `react-native-web` para visualizacao rapida no navegador durante desenvolvimento.
 
-## Regras de negocio
+## Perfis do app
 
-- A portaria pode ligar para unidades do seu proprio condominio.
-- O morador pode ligar para a portaria do seu condominio.
+- Portaria: usuario criado no onboarding do condominio pelo backoffice, vinculado a `portaria_devices`.
+- Morador: usuario criado no fluxo de unidade/morador do backoffice, vinculado a `unit_members`.
+
+O app nao usa login de `ADMIN` ou `CONSULTOR` do backoffice.
+
+## Regras de negocio confirmadas
+
+- A portaria pode ligar para unidades do proprio condominio.
+- O morador pode ligar para a portaria do proprio condominio.
 - O morador pode ligar para outra unidade/casa do mesmo condominio.
+- O morador nao pode ligar para a propria unidade.
 - Nenhum usuario pode visualizar ou chamar unidades de outro condominio.
-- Permissoes como "recebe chamadas", "faz chamadas" e "ativo" devem ser validadas pelo backend.
-- Historico de chamadas deve registrar origem, destino, status, horario e condominio.
+- Permissoes de chamada devem ser validadas no backend:
+  - `active_for_calls`
+  - `can_receive_calls`
+  - `can_make_calls`
+  - dispositivo de portaria ativo
+- O historico deve registrar origem, destino, status, horario e condominio.
 
-## Entregas da Fase 1
+## Entregas implementadas
 
-- Projeto React Native com Expo e TypeScript.
-- Tema visual inicial do Confia.
-- Login real com Supabase Auth.
+### 1. Fundacao do app
+
+Commit: `306dd6c Add Confia mobile phase 1 foundation`
+
+- Criado projeto `confia-interfone-app`.
+- Criado repositorio GitHub separado do backoffice/backend.
+- Criada estrutura inicial:
+  - `src/components`
+  - `src/config`
+  - `src/data`
+  - `src/screens`
+  - `src/services`
+  - `src/theme`
+  - `src/types`
+  - `docs`
+- Criado tema visual inicial do Confia.
+- Criadas telas iniciais de morador e portaria com dados demo.
+- Criada documentacao inicial de escopo e seguranca.
+
+### 2. Ajuste de compatibilidade Expo
+
+Commit: `81af64e Fix Expo SDK dependency versions`
+
+- Corrigidas versoes de dependencias compativeis com Expo SDK 54.
+- Adicionado suporte web:
+  - `react-dom`
+  - `react-native-web`
+- Mantido `expo-secure-store`.
+- Validado export web.
+
+### 3. Login real com Supabase
+
+Commit: `61451d2 Add real Supabase app login`
+
+- Substituida selecao simulada de perfil por login real.
+- Login com e-mail e senha via Supabase Auth.
+- Sessao carregada automaticamente ao abrir o app.
+- Logout real.
 - Identificacao automatica de perfil pelo RPC `get_current_user_context`.
-- Home do morador com chamada para portaria e unidades.
-- Home da portaria com status do dispositivo e chamada para unidades.
-- Estrutura inicial para Supabase Auth.
-- Sessao preparada para armazenamento seguro no dispositivo.
-- Documentacao de seguranca, loja e roadmap.
+- Direcionamento automatico:
+  - role `MORADOR` -> tela de morador
+  - role `PORTARIA` -> tela de portaria
+- Carregamento do nome do condominio.
+- Carregamento do diretorio de unidades via RLS.
+- Uso de `.env` com:
+  - `EXPO_PUBLIC_SUPABASE_URL`
+  - `EXPO_PUBLIC_SUPABASE_ANON_KEY`
 
-## Fora da Fase 1
+### 4. Conexao dos botoes de chamada
 
-- Voz real.
-- Video.
-- Publicacao nas lojas.
-- Push notification em producao.
-- CallKit/ConnectionService.
+Commit app: `d046538 Connect app call actions to backend`
 
-## Proximas fases
+Commit backend relacionado: `2833dca Add unit to unit call RPC`
 
-1. Fase 1: MVP funcional sem voz real.
-2. Fase 2: integracao de voz real.
-3. Fase 3: chamadas em background, notificacoes e beta nas lojas.
-4. Fase 4: publicacao oficial e hardening de producao.
+- Conectado botao da portaria:
+  - `start_portaria_call`
+- Conectado botao do morador para portaria:
+  - `start_unit_to_portaria_call`
+- Criada e aplicada no backend a RPC:
+  - `start_unit_to_unit_call`
+- Conectado botao do morador para outra unidade:
+  - `start_unit_to_unit_call`
+- Protegido `.env` local no `.gitignore`.
+
+### 5. Estados e feedback dos botoes
+
+Commit: `67d94c4 Clarify resident call button states`
+
+- Botao de morador para propria unidade passa a ficar desabilitado.
+- Texto em tela explica que e necessario criar outra unidade para testar chamada entre casas.
+- Botao de chamada mostra feedback em tela:
+  - chamando
+  - chamada iniciada
+  - erro retornado pelo backend
+- Botao `PrimaryButton` passou a aceitar `disabled`.
+
+### 6. Historico real de chamadas
+
+Commit: `7204a4f Load real call history in app`
+
+- Conectado app ao RPC:
+  - `get_my_call_history`
+- Morador ve historico real de chamadas.
+- Portaria ve historico real de chamadas.
+- Botao `Ver historico` virou `Atualizar historico`.
+- Contador `Tocando` da portaria passou a usar chamadas reais carregadas.
+- Removido uso do historico demo nas telas principais.
+
+## Contratos de backend usados pelo app
+
+- `get_current_user_context()`
+- `get_my_call_history(p_limit)`
+- `start_portaria_call(p_unit_id)`
+- `start_unit_to_portaria_call(p_unit_id)`
+- `start_unit_to_unit_call(p_origin_unit_id, p_target_unit_id)`
+
+Contratos ja existentes e previstos para proximos passos:
+
+- `get_my_pending_calls()`
+- `answer_call(p_call_id, p_user_id)`
+- `answer_portaria_call(p_call_id)`
+- `cancel_call(p_call_id, p_reason)`
+- `end_call(p_call_id, p_reason)`
+
+## Fluxos validados
+
+### Login portaria
+
+- Usuario de portaria criado no backoffice consegue logar no app.
+- App identifica role `PORTARIA`.
+- App carrega condominio vinculado.
+- App mostra dispositivo da portaria.
+- App lista unidades do condominio.
+
+### Login morador
+
+- Usuario morador criado no backoffice consegue logar no app.
+- App identifica role `MORADOR`.
+- App carrega unidade vinculada.
+- App lista unidades do condominio.
+- App bloqueia chamada para a propria unidade.
+
+### Chamada
+
+- Morador consegue iniciar chamada para portaria.
+- Portaria consegue iniciar chamada para unidade.
+- Morador para outra unidade esta implementado, mas exige ao menos duas unidades com moradores ativos no mesmo condominio para teste completo.
+
+### Historico
+
+- Historico real e carregado pelo app.
+- Chamadas criadas aparecem apos atualizar historico.
+
+## Seguranca da Fase 1
+
+- App usa apenas chave publica do Supabase.
+- App nao contem `service_role_key`.
+- App nao contem `ADMIN_API_SECRET`.
+- App nao contem segredos do backoffice.
+- Arquivo `.env` local esta ignorado pelo Git.
+- Regras sensiveis ficam no backend, via RPC.
+- Perfis e permissoes sao validados pelo backend.
+- Sessao mobile usa armazenamento seguro quando fora do web.
+
+## Configuracao local
+
+Arquivo:
+
+```text
+.env
+```
+
+Conteudo:
+
+```text
+EXPO_PUBLIC_SUPABASE_URL=https://uvdwoisdcikzhqjwbhog.supabase.co
+EXPO_PUBLIC_SUPABASE_ANON_KEY=<publishable-ou-anon-key>
+```
+
+Rodar:
+
+```powershell
+npm install
+npx expo start -c
+```
+
+Validar:
+
+```powershell
+npm run typecheck
+npx expo export --platform web --output-dir .tmp-web-export
+```
+
+## Status da Fase 1
+
+Status: em construcao avancada.
+
+Concluido:
+
+- Setup do app.
+- Login real.
+- Identificacao de perfil.
+- Telas iniciais por perfil.
+- Diretorio de unidades.
+- Acoes de chamada via backend.
+- Historico real de chamadas.
+- Documentacao de seguranca inicial.
+
+Pendente dentro da Fase 1:
+
+- Tela/estado de chamada em andamento.
+- Listagem de chamadas pendentes via `get_my_pending_calls`.
+- Acoes de atender, cancelar e encerrar chamada.
+- Atualizacao automatica ou realtime.
+- Melhorar labels de origem/destino quando existirem varias unidades e moradores.
+- Teste completo de morador para outra unidade com duas unidades reais.
+
+## Proximas fases do app
+
+### Fase 1 - MVP operacional sem voz real
+
+Objetivo: validar login, perfis, chamadas transacionais, historico e estados de chamada.
+
+Status: em andamento, com base funcional pronta.
+
+### Fase 2 - Voz real
+
+Objetivo: integrar audio real entre portaria e moradores.
+
+Escopo previsto:
+
+- Definir provedor/arquitetura de voz.
+- Avaliar WebRTC, LiveKit, Daily, Agora ou Twilio.
+- Criar sala/sessao de audio por chamada.
+- Integrar permissao de microfone.
+- Garantir que segredos do provedor fiquem no backend.
+
+### Fase 3 - Notificacoes e background
+
+Objetivo: permitir chamadas recebidas com app em segundo plano.
+
+Escopo previsto:
+
+- Push notifications.
+- Firebase Cloud Messaging para Android.
+- Apple Push Notification service para iOS.
+- Avaliar CallKit no iOS.
+- Avaliar ConnectionService no Android.
+- Beta fechado/TestFlight/internal testing.
+
+### Fase 4 - Publicacao oficial e hardening
+
+Objetivo: preparar app para lojas oficiais e uso piloto.
+
+Escopo previsto:
+
+- Politica de privacidade.
+- Data Safety do Google Play.
+- App Privacy da Apple.
+- Conta Apple Developer.
+- Conta Google Play Console.
+- Monitoramento de erros.
+- Revisao LGPD.
+- Checklist de permissao de microfone/notificacao.
+- Build de producao com EAS.
+
+## Observacoes importantes
+
+- O app ainda nao tem voz real; as chamadas atuais sao estados transacionais no backend.
+- O historico atual depende de atualizacao manual.
+- Para testar chamada entre moradores, e necessario cadastrar uma segunda unidade com morador ativo no backoffice.
+- O backoffice continua sendo responsavel por criar condominios, portaria, unidades e moradores.
