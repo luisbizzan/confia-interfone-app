@@ -124,20 +124,36 @@ Commit: `7204a4f Load real call history in app`
 - Contador `Tocando` da portaria passou a usar chamadas reais carregadas.
 - Removido uso do historico demo nas telas principais.
 
+### 7. Chamadas pendentes e atendimento
+
+Commit: `Add pending call handling`
+
+- Conectado app ao RPC:
+  - `get_my_pending_calls`
+- Morador passa a ver chamadas tocando para sua unidade.
+- Portaria passa a ver chamadas tocando para a portaria.
+- Morador pode atender chamada recebida via:
+  - `answer_call`
+- Portaria pode atender chamada recebida via:
+  - `answer_portaria_call`
+- Historico com chamadas em `RINGING` passa a exibir acao de cancelamento via:
+  - `cancel_call`
+- Atualizacao manual agora recarrega historico e chamadas pendentes.
+
 ## Contratos de backend usados pelo app
 
 - `get_current_user_context()`
 - `get_my_call_history(p_limit)`
+- `get_my_pending_calls()`
 - `start_portaria_call(p_unit_id)`
 - `start_unit_to_portaria_call(p_unit_id)`
 - `start_unit_to_unit_call(p_origin_unit_id, p_target_unit_id)`
-
-Contratos ja existentes e previstos para proximos passos:
-
-- `get_my_pending_calls()`
 - `answer_call(p_call_id, p_user_id)`
 - `answer_portaria_call(p_call_id)`
 - `cancel_call(p_call_id, p_reason)`
+
+Contratos ja existentes e previstos para proximos passos:
+
 - `end_call(p_call_id, p_reason)`
 
 ## Fluxos validados
@@ -168,6 +184,14 @@ Contratos ja existentes e previstos para proximos passos:
 
 - Historico real e carregado pelo app.
 - Chamadas criadas aparecem apos atualizar historico.
+
+### Pendentes e atendimento
+
+- Morador ve chamadas recebidas em aberto.
+- Portaria ve chamadas recebidas em aberto.
+- Morador consegue atender chamada recebida.
+- Portaria consegue atender chamada recebida.
+- Chamadas tocando podem ser canceladas pelo originador quando permitido pelo backend.
 
 ## Seguranca da Fase 1
 
@@ -222,13 +246,15 @@ Concluido:
 - Diretorio de unidades.
 - Acoes de chamada via backend.
 - Historico real de chamadas.
+- Chamadas pendentes.
+- Atendimento de chamadas recebidas.
+- Cancelamento de chamadas tocando.
 - Documentacao de seguranca inicial.
 
 Pendente dentro da Fase 1:
 
 - Tela/estado de chamada em andamento.
-- Listagem de chamadas pendentes via `get_my_pending_calls`.
-- Acoes de atender, cancelar e encerrar chamada.
+- Acao explicita de encerrar chamada via `end_call`.
 - Atualizacao automatica ou realtime.
 - Melhorar labels de origem/destino quando existirem varias unidades e moradores.
 - Teste completo de morador para outra unidade com duas unidades reais.

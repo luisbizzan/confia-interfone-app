@@ -85,3 +85,32 @@ export type BackendCallRecord = {
   ended_at: string | null;
   created_at: string;
 };
+
+export type PendingUnitCall = {
+  call_id: string;
+  attempt_id: string;
+  unit_id: string;
+  origin_type: 'PORTARIA' | 'UNIT';
+  origin_unit_id: string | null;
+  origin_portaria_device_id: string | null;
+  target_type: 'UNIT';
+  status: 'RINGING';
+  started_at: string;
+  attempt_started_at: string;
+};
+
+export type PendingPortariaCall = {
+  call_id: string;
+  unit_id: string;
+  origin_type: 'UNIT';
+  origin_unit_id: string | null;
+  target_type: 'PORTARIA';
+  target_portaria_device_id: string;
+  status: 'RINGING';
+  started_at: string;
+};
+
+export type PendingCalls = {
+  unit_calls: PendingUnitCall[];
+  portaria_calls: PendingPortariaCall[];
+};

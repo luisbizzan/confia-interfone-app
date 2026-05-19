@@ -4,9 +4,16 @@ import { Alert, StyleSheet, Text, View } from 'react-native';
 import { Card } from '../components/Card';
 import { PrimaryButton } from '../components/PrimaryButton';
 import { demoUnits } from '../data/demo-data';
-import { getMyCallHistory, startResidentToGatehouseCall, startResidentToUnitCall } from '../services/calls';
+import {
+  answerResidentCall,
+  cancelCall,
+  getMyCallHistory,
+  getMyPendingCalls,
+  startResidentToGatehouseCall,
+  startResidentToUnitCall,
+} from '../services/calls';
 import { theme } from '../theme/theme';
-import type { AuthenticatedUser, BackendCallRecord, CallRecord, UnitDirectoryItem, UserContext } from '../types/domain';
+import type { AuthenticatedUser, BackendCallRecord, CallRecord, PendingUnitCall, UnitDirectoryItem, UserContext } from '../types/domain';
 
 type ResidentHomeScreenProps = {
   context: UserContext;
@@ -20,11 +27,12 @@ export function ResidentHomeScreen({ context, directoryUnits, user }: ResidentHo
   const units = directoryUnits.length > 0 ? directoryUnits : myUnits.length > 0 ? buildUnitsFromContext(context) : demoUnits;
   const unitLabels = useMemo(() => buildUnitLabelMap([...directoryUnits, ...buildUnitsFromContext(context)]), [context, directoryUnits]);
   const [history, setHistory] = useState<CallRecord[]>([]);
+  const [pendingCalls, setPendingCalls] = useState<PendingUnitCall[]>([]);
   const [feedback, setFeedback] = useState<string | null>(null);
   const [activeCallTarget, setActiveCallTarget] = useState<string | null>(null);
 
   useEffect(() => {
-    refreshHistory(unitLabels, setHistory, setFeedback);
+    refreshResidentData(unitLabels, setHistory, setPendingCalls, setFeedback);
   }, [unitLabels]);
 
   return (
@@ -52,10 +60,20 @@ export function ResidentHomeScreen({ context, directoryUnits, user }: ResidentHo
               handleResidentToGatehouseCall(originUnit.unit_id, setFeedback, setActiveCallTarget);
             }}
           />
-          <PrimaryButton label="Atualizar historico" tone="neutral" onPress={() => refreshHistory(unitLabels, setHistory, setFeedback)} />
+          <PrimaryButton
+            label="Atualizar chamadas"
+            tone="neutral"
+            onPress={() => refreshResidentData(unitLabels, setHistory, setPendingCalls, setFeedback)}
+          />
         </View>
         {feedback ? <Text style={styles.feedback}>{feedback}</Text> : null}
       </Card>
+
+      <PendingCallsPanel
+        calls={pendingCalls}
+        onAnswer={(callId) => handleAnswerResidentCall(callId, user.id, unitLabels, setHistory, setPendingCalls, setFeedback)}
+        unitLabels={unitLabels}
+      />
 
       <View style={styles.section}>
         <Text style={styles.sectionTitle}>Unidades do condominio</Text>
@@ -73,7 +91,10 @@ export function ResidentHomeScreen({ context, directoryUnits, user }: ResidentHo
         </View>
       </View>
 
-      <CallHistory calls={history} />
+      <CallHistory
+        calls={history}
+        onCancel={(callId) => handleCancelCall(callId, unitLabels, setHistory, setPendingCalls, setFeedback)}
+      />
     </View>
   );
 }
@@ -150,7 +171,40 @@ function UnitCard({
   );
 }
 
-function CallHistory({ calls }: { calls: CallRecord[] }) {
+function PendingCallsPanel({
+  calls,
+  onAnswer,
+  unitLabels,
+}: {
+  calls: PendingUnitCall[];
+  onAnswer: (callId: string) => void;
+  unitLabels: Map<string, string>;
+}) {
+  return (
+    <View style={styles.section}>
+      <Text style={styles.sectionTitle}>Chamadas recebidas</Text>
+      <View style={styles.list}>
+        {calls.length === 0 ? (
+          <Card>
+            <Text style={styles.itemMeta}>Nenhuma chamada tocando para sua unidade.</Text>
+          </Card>
+        ) : (
+          calls.map((call) => (
+            <Card key={call.call_id}>
+              <Text style={styles.itemTitle}>{pendingCallTitle(call, unitLabels)}</Text>
+              <Text style={styles.itemMeta}>Tocando desde {formatDateTime(call.started_at)}</Text>
+              <View style={styles.cardAction}>
+                <PrimaryButton label="Atender" onPress={() => onAnswer(call.call_id)} />
+              </View>
+            </Card>
+          ))
+        )}
+      </View>
+    </View>
+  );
+}
+
+function CallHistory({ calls, onCancel }: { calls: CallRecord[]; onCancel: (callId: string) => void }) {
   return (
     <View style={styles.section}>
       <Text style={styles.sectionTitle}>Historico recente</Text>
@@ -168,12 +222,26 @@ function CallHistory({ calls }: { calls: CallRecord[] }) {
               <Text style={styles.itemMeta}>
                 {callStatusLabel(call.status)} - {call.startedAt}
               </Text>
+              {call.status === 'RINGING' ? (
+                <View style={styles.cardAction}>
+                  <PrimaryButton label="Cancelar chamada" tone="neutral" onPress={() => onCancel(call.id)} />
+                </View>
+              ) : null}
             </Card>
           ))
         )}
       </View>
     </View>
   );
+}
+
+async function refreshResidentData(
+  unitLabels: Map<string, string>,
+  setHistory: (history: CallRecord[]) => void,
+  setPendingCalls: (calls: PendingUnitCall[]) => void,
+  setFeedback: (message: string | null) => void,
+) {
+  await Promise.all([refreshHistory(unitLabels, setHistory, setFeedback), refreshPendingCalls(setPendingCalls, setFeedback)]);
 }
 
 async function refreshHistory(
@@ -186,6 +254,15 @@ async function refreshHistory(
     setHistory(calls.map((call) => mapBackendCall(call, unitLabels)));
   } catch (err) {
     setFeedback(`Nao foi possivel carregar o historico: ${err instanceof Error ? err.message : 'Tente novamente.'}`);
+  }
+}
+
+async function refreshPendingCalls(setPendingCalls: (calls: PendingUnitCall[]) => void, setFeedback: (message: string | null) => void) {
+  try {
+    const calls = await getMyPendingCalls();
+    setPendingCalls(calls.unit_calls ?? []);
+  } catch (err) {
+    setFeedback(`Nao foi possivel carregar chamadas recebidas: ${err instanceof Error ? err.message : 'Tente novamente.'}`);
   }
 }
 
@@ -206,6 +283,16 @@ function mapBackendCall(call: BackendCallRecord, unitLabels: Map<string, string>
     status: call.status,
     startedAt: formatDateTime(call.started_at),
   };
+}
+
+function pendingCallTitle(call: PendingUnitCall, unitLabels: Map<string, string>) {
+  if (call.origin_type === 'PORTARIA') {
+    return `Portaria para ${unitLabels.get(call.unit_id) ?? 'sua unidade'}`;
+  }
+
+  return `${call.origin_unit_id ? unitLabels.get(call.origin_unit_id) ?? 'Unidade' : 'Unidade'} para ${
+    unitLabels.get(call.unit_id) ?? 'sua unidade'
+  }`;
 }
 
 function formatDateTime(value: string) {
@@ -241,6 +328,43 @@ async function handleResidentToGatehouseCall(
     setFeedback(`Nao foi possivel chamar a portaria: ${err instanceof Error ? err.message : 'Tente novamente.'}`);
   } finally {
     setActiveCallTarget(null);
+  }
+}
+
+async function handleAnswerResidentCall(
+  callId: string,
+  userId: string,
+  unitLabels: Map<string, string>,
+  setHistory: (history: CallRecord[]) => void,
+  setPendingCalls: (calls: PendingUnitCall[]) => void,
+  setFeedback: (message: string | null) => void,
+) {
+  setFeedback('Atendendo chamada...');
+
+  try {
+    const call = await answerResidentCall(callId, userId);
+    setFeedback(`Chamada atendida. Status: ${call.status}.`);
+    await refreshResidentData(unitLabels, setHistory, setPendingCalls, setFeedback);
+  } catch (err) {
+    setFeedback(`Nao foi possivel atender: ${err instanceof Error ? err.message : 'Tente novamente.'}`);
+  }
+}
+
+async function handleCancelCall(
+  callId: string,
+  unitLabels: Map<string, string>,
+  setHistory: (history: CallRecord[]) => void,
+  setPendingCalls: (calls: PendingUnitCall[]) => void,
+  setFeedback: (message: string | null) => void,
+) {
+  setFeedback('Cancelando chamada...');
+
+  try {
+    const call = await cancelCall(callId);
+    setFeedback(`Chamada cancelada. Status: ${call.status}.`);
+    await refreshResidentData(unitLabels, setHistory, setPendingCalls, setFeedback);
+  } catch (err) {
+    setFeedback(`Nao foi possivel cancelar: ${err instanceof Error ? err.message : 'Tente novamente.'}`);
   }
 }
 

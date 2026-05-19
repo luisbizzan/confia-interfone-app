@@ -4,9 +4,9 @@ import { Alert, StyleSheet, Text, View } from 'react-native';
 import { Card } from '../components/Card';
 import { PrimaryButton } from '../components/PrimaryButton';
 import { demoUnits } from '../data/demo-data';
-import { getMyCallHistory, startGatehouseToUnitCall } from '../services/calls';
+import { answerGatehouseCall, cancelCall, getMyCallHistory, getMyPendingCalls, startGatehouseToUnitCall } from '../services/calls';
 import { theme } from '../theme/theme';
-import type { AuthenticatedUser, BackendCallRecord, CallRecord, UnitDirectoryItem, UserContext } from '../types/domain';
+import type { AuthenticatedUser, BackendCallRecord, CallRecord, PendingPortariaCall, UnitDirectoryItem, UserContext } from '../types/domain';
 
 type GatehouseHomeScreenProps = {
   context: UserContext;
@@ -20,11 +20,12 @@ export function GatehouseHomeScreen({ context, directoryUnits, user }: Gatehouse
   const unitLabels = useMemo(() => new Map(units.map((unit) => [unit.id, unit.label])), [units]);
   const [feedback, setFeedback] = useState<string | null>(null);
   const [history, setHistory] = useState<CallRecord[]>([]);
+  const [pendingCalls, setPendingCalls] = useState<PendingPortariaCall[]>([]);
   const [activeCallTarget, setActiveCallTarget] = useState<string | null>(null);
-  const ringingCalls = history.filter((call) => call.status === 'RINGING').length;
+  const ringingCalls = pendingCalls.length;
 
   useEffect(() => {
-    refreshHistory(unitLabels, setHistory, setFeedback);
+    refreshGatehouseData(unitLabels, setHistory, setPendingCalls, setFeedback);
   }, [unitLabels]);
 
   return (
@@ -78,12 +79,21 @@ export function GatehouseHomeScreen({ context, directoryUnits, user }: Gatehouse
         {feedback ? <Text style={styles.feedback}>{feedback}</Text> : null}
       </View>
 
+      <PendingCallsPanel
+        calls={pendingCalls}
+        onAnswer={(callId) => handleAnswerGatehouseCall(callId, unitLabels, setHistory, setPendingCalls, setFeedback)}
+        unitLabels={unitLabels}
+      />
+
       <View style={styles.section}>
         <View style={styles.rowBetween}>
           <Text style={styles.sectionTitle}>Historico recente</Text>
-          <PrimaryButton label="Atualizar" tone="neutral" onPress={() => refreshHistory(unitLabels, setHistory, setFeedback)} />
+          <PrimaryButton label="Atualizar" tone="neutral" onPress={() => refreshGatehouseData(unitLabels, setHistory, setPendingCalls, setFeedback)} />
         </View>
-        <CallHistory calls={history} />
+        <CallHistory
+          calls={history}
+          onCancel={(callId) => handleCancelCall(callId, unitLabels, setHistory, setPendingCalls, setFeedback)}
+        />
       </View>
     </View>
   );
@@ -127,7 +137,40 @@ function GatehouseUnitCard({
   );
 }
 
-function CallHistory({ calls }: { calls: CallRecord[] }) {
+function PendingCallsPanel({
+  calls,
+  onAnswer,
+  unitLabels,
+}: {
+  calls: PendingPortariaCall[];
+  onAnswer: (callId: string) => void;
+  unitLabels: Map<string, string>;
+}) {
+  return (
+    <View style={styles.section}>
+      <Text style={styles.sectionTitle}>Chamadas recebidas</Text>
+      <View style={styles.list}>
+        {calls.length === 0 ? (
+          <Card>
+            <Text style={styles.itemMeta}>Nenhuma chamada tocando para a portaria.</Text>
+          </Card>
+        ) : (
+          calls.map((call) => (
+            <Card key={call.call_id}>
+              <Text style={styles.itemTitle}>{unitLabels.get(call.origin_unit_id ?? call.unit_id) ?? 'Unidade'} para Portaria</Text>
+              <Text style={styles.itemMeta}>Tocando desde {formatDateTime(call.started_at)}</Text>
+              <View style={styles.cardAction}>
+                <PrimaryButton label="Atender" onPress={() => onAnswer(call.call_id)} />
+              </View>
+            </Card>
+          ))
+        )}
+      </View>
+    </View>
+  );
+}
+
+function CallHistory({ calls, onCancel }: { calls: CallRecord[]; onCancel: (callId: string) => void }) {
   return (
     <View style={styles.list}>
       {calls.length === 0 ? (
@@ -143,11 +186,25 @@ function CallHistory({ calls }: { calls: CallRecord[] }) {
             <Text style={styles.itemMeta}>
               {callStatusLabel(call.status)} - {call.startedAt}
             </Text>
+            {call.status === 'RINGING' ? (
+              <View style={styles.cardAction}>
+                <PrimaryButton label="Cancelar chamada" tone="neutral" onPress={() => onCancel(call.id)} />
+              </View>
+            ) : null}
           </Card>
         ))
       )}
     </View>
   );
+}
+
+async function refreshGatehouseData(
+  unitLabels: Map<string, string>,
+  setHistory: (history: CallRecord[]) => void,
+  setPendingCalls: (calls: PendingPortariaCall[]) => void,
+  setFeedback: (message: string | null) => void,
+) {
+  await Promise.all([refreshHistory(unitLabels, setHistory, setFeedback), refreshPendingCalls(setPendingCalls, setFeedback)]);
 }
 
 async function handleGatehouseToUnitCall(
@@ -169,6 +226,42 @@ async function handleGatehouseToUnitCall(
   }
 }
 
+async function handleAnswerGatehouseCall(
+  callId: string,
+  unitLabels: Map<string, string>,
+  setHistory: (history: CallRecord[]) => void,
+  setPendingCalls: (calls: PendingPortariaCall[]) => void,
+  setFeedback: (message: string | null) => void,
+) {
+  setFeedback('Atendendo chamada...');
+
+  try {
+    const call = await answerGatehouseCall(callId);
+    setFeedback(`Chamada atendida. Status: ${call.status}.`);
+    await refreshGatehouseData(unitLabels, setHistory, setPendingCalls, setFeedback);
+  } catch (err) {
+    setFeedback(`Nao foi possivel atender: ${err instanceof Error ? err.message : 'Tente novamente.'}`);
+  }
+}
+
+async function handleCancelCall(
+  callId: string,
+  unitLabels: Map<string, string>,
+  setHistory: (history: CallRecord[]) => void,
+  setPendingCalls: (calls: PendingPortariaCall[]) => void,
+  setFeedback: (message: string | null) => void,
+) {
+  setFeedback('Cancelando chamada...');
+
+  try {
+    const call = await cancelCall(callId);
+    setFeedback(`Chamada cancelada. Status: ${call.status}.`);
+    await refreshGatehouseData(unitLabels, setHistory, setPendingCalls, setFeedback);
+  } catch (err) {
+    setFeedback(`Nao foi possivel cancelar: ${err instanceof Error ? err.message : 'Tente novamente.'}`);
+  }
+}
+
 async function refreshHistory(
   unitLabels: Map<string, string>,
   setHistory: (history: CallRecord[]) => void,
@@ -179,6 +272,15 @@ async function refreshHistory(
     setHistory(calls.map((call) => mapBackendCall(call, unitLabels)));
   } catch (err) {
     setFeedback(`Nao foi possivel carregar o historico: ${err instanceof Error ? err.message : 'Tente novamente.'}`);
+  }
+}
+
+async function refreshPendingCalls(setPendingCalls: (calls: PendingPortariaCall[]) => void, setFeedback: (message: string | null) => void) {
+  try {
+    const calls = await getMyPendingCalls();
+    setPendingCalls(calls.portaria_calls ?? []);
+  } catch (err) {
+    setFeedback(`Nao foi possivel carregar chamadas recebidas: ${err instanceof Error ? err.message : 'Tente novamente.'}`);
   }
 }
 
