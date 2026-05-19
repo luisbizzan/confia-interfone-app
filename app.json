@@ -1,6 +1,6 @@
 {
   "expo": {
-    "name": "confia-interfone-app",
+    "name": "Confia Interfone",
     "slug": "confia-interfone-app",
     "version": "1.0.0",
     "orientation": "portrait",
@@ -25,6 +25,10 @@
     },
     "web": {
       "favicon": "./assets/favicon.png"
+    },
+    "extra": {
+      "supabaseUrl": "$EXPO_PUBLIC_SUPABASE_URL",
+      "supabaseAnonKey": "$EXPO_PUBLIC_SUPABASE_ANON_KEY"
     }
   }
 }
