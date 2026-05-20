@@ -66,6 +66,8 @@ Fluxos prioritarios:
 
 Playwright nao deve ser a ferramenta principal para testar app nativo Android/iOS.
 
+Playwright tambem nao deve validar audio real do LiveKit em ambiente nativo. Ele pode validar apenas os estados web e chamadas HTTP envolvidas no preparo da sala.
+
 Para app nativo, ferramentas candidatas:
 
 - Maestro;
@@ -73,6 +75,21 @@ Para app nativo, ferramentas candidatas:
 - Appium.
 
 Na primeira etapa, Playwright cobre o app pelo modo web. Depois, quando houver voz real, push e background, sera necessario complementar com testes mobile nativos.
+
+Para a Fase 2 com LiveKit, Playwright pode validar:
+
+- chamada passa para `ANSWERED`;
+- painel `Chamada em andamento` aparece;
+- botao `Preparar audio` aparece;
+- app chama a Edge Function `livekit-token`;
+- resposta contem `serverUrl`, `roomName` e `token`;
+- erro de token indisponivel aparece em tela quando secrets nao estiverem configurados.
+
+Validacao real de microfone/audio deve ser feita com:
+
+- development build Expo;
+- teste manual assistido em Android/iOS;
+- posteriormente Maestro, Detox ou Appium.
 
 ## Estrutura sugerida
 
@@ -291,10 +308,14 @@ resident-refresh-calls
 resident-pending-call-answer
 resident-active-call-end
 resident-active-call-auto-refresh
+resident-voice-prepare
+resident-voice-ready
 resident-unit-unavailable
 gatehouse-call-unit
 gatehouse-pending-call-answer
 gatehouse-active-call-end
+gatehouse-voice-prepare
+gatehouse-voice-ready
 call-history-list
 ```
 

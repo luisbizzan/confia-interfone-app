@@ -3,6 +3,7 @@ import { Alert, StyleSheet, Text, View } from 'react-native';
 
 import { Card } from '../components/Card';
 import { PrimaryButton } from '../components/PrimaryButton';
+import { VoiceJoinPanel } from '../components/VoiceJoinPanel';
 import { demoUnits } from '../data/demo-data';
 import { answerGatehouseCall, cancelCall, endCall, getMyCallHistory, getMyPendingCalls, startGatehouseToUnitCall } from '../services/calls';
 import { theme } from '../theme/theme';
@@ -198,6 +199,7 @@ function ActiveCallsPanel({ calls, onEnd }: { calls: CallRecord[]; onEnd: (callI
               {call.fromLabel} para {call.toLabel}
             </Text>
             <Text style={styles.itemMeta}>Atendida desde {call.startedAt}</Text>
+            <VoiceJoinPanel callId={call.id} />
             <View style={styles.cardAction}>
               <PrimaryButton label="Encerrar chamada" tone="danger" onPress={() => onEnd(call.id)} />
             </View>

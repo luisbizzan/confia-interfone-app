@@ -6,15 +6,17 @@ type PrimaryButtonProps = {
   disabled?: boolean;
   label: string;
   onPress: () => void;
+  testID?: string;
   tone?: 'primary' | 'danger' | 'neutral';
 };
 
-export function PrimaryButton({ disabled = false, label, onPress, tone = 'primary' }: PrimaryButtonProps) {
+export function PrimaryButton({ disabled = false, label, onPress, testID, tone = 'primary' }: PrimaryButtonProps) {
   return (
     <TouchableOpacity
       accessibilityRole="button"
       disabled={disabled}
       style={[styles.button, tone === 'danger' && styles.danger, tone === 'neutral' && styles.neutral, disabled && styles.disabled]}
+      testID={testID}
       onPress={onPress}
     >
       <Text style={[styles.label, tone === 'neutral' && styles.neutralLabel, disabled && styles.disabledLabel]}>{label}</Text>

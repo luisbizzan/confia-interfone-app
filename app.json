@@ -13,6 +13,9 @@
       "backgroundColor": "#ffffff"
     },
     "ios": {
+      "infoPlist": {
+        "NSMicrophoneUsageDescription": "O Confia usa o microfone para chamadas de interfone entre moradores e portaria."
+      },
       "supportsTablet": true
     },
     "android": {
@@ -21,6 +24,10 @@
         "backgroundColor": "#ffffff"
       },
       "edgeToEdgeEnabled": true,
+      "permissions": [
+        "android.permission.RECORD_AUDIO",
+        "android.permission.MODIFY_AUDIO_SETTINGS"
+      ],
       "predictiveBackGestureEnabled": false
     },
     "web": {
@@ -31,7 +38,9 @@
       "supabaseAnonKey": "$EXPO_PUBLIC_SUPABASE_ANON_KEY"
     },
     "plugins": [
-      "expo-secure-store"
+      "expo-secure-store",
+      "@livekit/react-native-expo-plugin",
+      "@config-plugins/react-native-webrtc"
     ]
   }
 }

@@ -317,13 +317,50 @@ Status: em andamento, com base funcional pronta.
 
 Objetivo: integrar audio real entre portaria e moradores.
 
-Escopo previsto:
+Provedor escolhido: LiveKit Cloud.
 
-- Definir provedor/arquitetura de voz.
-- Avaliar WebRTC, LiveKit, Daily, Agora ou Twilio.
-- Criar sala/sessao de audio por chamada.
-- Integrar permissao de microfone.
-- Garantir que segredos do provedor fiquem no backend.
+Status: iniciada.
+
+Entregas iniciadas:
+
+- Dependencias LiveKit instaladas no app:
+  - `@livekit/react-native`
+  - `@livekit/react-native-expo-plugin`
+  - `@livekit/react-native-webrtc`
+  - `@config-plugins/react-native-webrtc`
+  - `livekit-client`
+  - `expo-dev-client`
+- Expo configurado com plugins nativos do LiveKit/WebRTC.
+- Permissoes de microfone configuradas para Android e iOS.
+- Backend passa a ter a Edge Function `livekit-token`.
+- App passa a solicitar token temporario de voz pelo `call_id`.
+- Painel de chamada em andamento passa a ter acao `Preparar audio`.
+
+Regras de seguranca:
+
+- O app nao armazena `LIVEKIT_API_SECRET`.
+- Tokens de voz sao emitidos pelo backend.
+- Token so deve ser emitido para chamada com `status = ANSWERED` e `ended_at = null`.
+- Usuario precisa participar da chamada como morador ou portaria.
+- Sala LiveKit usa o padrao `confia-call-<call_id>`.
+
+Observacao tecnica:
+
+- LiveKit em Expo exige development build com `expo-dev-client`.
+- Expo Go nao suporta os modulos nativos de WebRTC exigidos pelo LiveKit.
+
+Escopo previsto restante:
+
+- Configurar secrets do LiveKit no Supabase:
+  - `LIVEKIT_URL`
+  - `LIVEKIT_API_KEY`
+  - `LIVEKIT_API_SECRET`
+- Publicar a Edge Function `livekit-token`.
+- Conectar sala LiveKit no app quando a chamada estiver `ANSWERED`.
+- Publicar somente audio/microfone no MVP.
+- Mutar/desmutar microfone.
+- Sair da sala ao chamar `end_call`.
+- Validar em development build Android.
 
 ### Fase 3 - Notificacoes e background
 
