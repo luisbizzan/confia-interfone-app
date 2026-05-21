@@ -101,6 +101,8 @@ Validacao real de microfone/audio deve ser feita com:
 
 No development build nativo, validar tambem:
 
+- APK Android interno gerado pelo perfil EAS `development`;
+- instalacao do development client no dispositivo de teste;
 - conexao de sala LiveKit em chamada `ANSWERED`;
 - audio bidirecional entre morador e portaria;
 - controle `Mutar microfone` e `Ativar microfone`;

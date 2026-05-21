@@ -351,6 +351,13 @@ Entregas iniciadas:
 - Integracao LiveKit foi separada por plataforma:
   - Android/iOS carregam WebRTC nativo, audio real e controles de microfone;
   - web continua validando token e fluxo transacional sem carregar modulo nativo.
+- EAS Build foi preparado para gerar APK Android interno:
+  - `eas.json` com perfil `development`;
+  - `developmentClient = true`;
+  - `distribution = internal`;
+  - `android.buildType = apk`.
+- Identificador Android definido para o app:
+  - `br.com.confia.interfone`.
 
 Regras de seguranca:
 
@@ -369,6 +376,8 @@ Observacao tecnica:
 Escopo previsto restante:
 
 - Sair da sala ao chamar `end_call`.
+- Fazer login no Expo/EAS e vincular o projeto ao EAS.
+- Gerar APK Android de development build.
 - Validar em development build Android.
 - Validar audio real entre duas sessoes com morador e portaria.
 - Evoluir UX de reconexao/erro depois do primeiro teste nativo.
