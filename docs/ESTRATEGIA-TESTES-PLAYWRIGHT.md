@@ -102,11 +102,20 @@ Validacao real de microfone/audio deve ser feita com:
 No development build nativo, validar tambem:
 
 - APK Android interno gerado pelo perfil EAS `development`;
+- projeto Expo vinculado ao EAS correto antes da build;
+- dependencia `expo-dev-client` na versao esperada pelo SDK Expo antes de investigar falhas Gradle;
 - instalacao do development client no dispositivo de teste;
 - conexao de sala LiveKit em chamada `ANSWERED`;
 - audio bidirecional entre morador e portaria;
 - controle `Mutar microfone` e `Ativar microfone`;
 - desconexao da sala ao encerrar a chamada.
+
+Registro da primeira build Android:
+
+- A primeira build de desenvolvimento no EAS falhou na etapa Gradle.
+- O log apontou erro Kotlin em `expo-dev-menu`.
+- A causa foi a linha `expo-dev-client@55` em um app Expo SDK 54.
+- A correcao esperada para a proxima tentativa e manter `expo-dev-client@~6.0.21` e confirmar `npx expo install --check` sem pendencias.
 
 ## Estrutura sugerida
 

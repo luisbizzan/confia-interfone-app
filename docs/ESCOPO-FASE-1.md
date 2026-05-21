@@ -358,6 +358,14 @@ Entregas iniciadas:
   - `android.buildType = apk`.
 - Identificador Android definido para o app:
   - `br.com.confia.interfone`.
+- Projeto vinculado ao EAS:
+  - conta `luisbizzan`;
+  - projeto `@luisbizzan/confia-interfone-app`;
+  - `projectId` salvo no `app.json`.
+- Primeira tentativa de build APK chegou ao Gradle e revelou incompatibilidade do development client:
+  - `expo-dev-client@55` puxava `expo-dev-menu` incompatível com Expo SDK 54;
+  - dependencia corrigida para a versao esperada pelo SDK 54:
+    - `expo-dev-client@~6.0.21`.
 
 Regras de seguranca:
 
@@ -376,8 +384,7 @@ Observacao tecnica:
 Escopo previsto restante:
 
 - Sair da sala ao chamar `end_call`.
-- Fazer login no Expo/EAS e vincular o projeto ao EAS.
-- Gerar APK Android de development build.
+- Gerar nova tentativa de APK Android de development build apos o alinhamento do `expo-dev-client`.
 - Validar em development build Android.
 - Validar audio real entre duas sessoes com morador e portaria.
 - Evoluir UX de reconexao/erro depois do primeiro teste nativo.

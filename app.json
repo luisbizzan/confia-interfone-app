@@ -16,7 +16,8 @@
       "infoPlist": {
         "NSMicrophoneUsageDescription": "O Confia usa o microfone para chamadas de interfone entre moradores e portaria."
       },
-      "supportsTablet": true
+      "supportsTablet": true,
+      "bitcode": false
     },
     "android": {
       "adaptiveIcon": {
@@ -27,7 +28,13 @@
       "package": "br.com.confia.interfone",
       "permissions": [
         "android.permission.RECORD_AUDIO",
-        "android.permission.MODIFY_AUDIO_SETTINGS"
+        "android.permission.MODIFY_AUDIO_SETTINGS",
+        "android.permission.ACCESS_NETWORK_STATE",
+        "android.permission.CAMERA",
+        "android.permission.INTERNET",
+        "android.permission.SYSTEM_ALERT_WINDOW",
+        "android.permission.WAKE_LOCK",
+        "android.permission.BLUETOOTH"
       ],
       "predictiveBackGestureEnabled": false
     },
@@ -36,12 +43,16 @@
     },
     "extra": {
       "supabaseUrl": "$EXPO_PUBLIC_SUPABASE_URL",
-      "supabaseAnonKey": "$EXPO_PUBLIC_SUPABASE_ANON_KEY"
+      "supabaseAnonKey": "$EXPO_PUBLIC_SUPABASE_ANON_KEY",
+      "eas": {
+        "projectId": "93e63b31-0a82-4cae-a968-310259ef1d6b"
+      }
     },
     "plugins": [
       "expo-secure-store",
       "@livekit/react-native-expo-plugin",
       "@config-plugins/react-native-webrtc"
-    ]
+    ],
+    "owner": "luisbizzan"
   }
 }
