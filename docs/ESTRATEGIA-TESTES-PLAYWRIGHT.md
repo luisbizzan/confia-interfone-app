@@ -129,6 +129,22 @@ Registro da segunda build Android:
   - conectar as duas pontas ao audio LiveKit;
   - validar microfone, mute e encerramento.
 
+Feedback observado no primeiro teste Android de voz:
+
+- O fluxo funcional conecta, mas ainda nao e ergonomico:
+  - originador chama;
+  - aguarda o atendimento;
+  - depois ainda precisa tocar em `Entrar no audio`.
+- O criterio de UX passa a exigir experiencia proxima a uma ligacao do WhatsApp:
+  - acao de chamada unica;
+  - estado visual de chamando/recebendo/conectando/em chamada;
+  - audio conectado automaticamente apos o atendimento;
+  - toque sonoro para chamada recebida;
+  - acao de ligar para unidade por icone em lista compacta.
+- Teste nativo adicional obrigatorio:
+  - confirmar que o audio padrao sai pelo fone do aparelho e nao inicia sempre em viva-voz;
+  - validar troca controlada para alto-falante quando essa opcao existir.
+
 ## Estrutura sugerida
 
 Pode ser criado um novo projeto de testes, por exemplo:

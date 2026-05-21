@@ -370,6 +370,14 @@ Entregas iniciadas:
   - build `a1f446c8-a1f4-4014-b227-f53d17c1d917`;
   - artefato interno disponivel para instalar o development build no Android;
   - proximo teste nativo passa a ser abrir o app no aparelho e validar chamada com audio LiveKit entre duas sessoes.
+- Primeiro teste Android com dois apps instalados confirmou que o tunel LiveKit conecta as duas pontas.
+- Feedback do primeiro uso real do morador:
+  - o audio nao deve exigir um segundo toque em `Entrar no audio` depois do atendimento;
+  - a chamada deve migrar automaticamente para a tela de ligacao quando a outra ponta atender;
+  - a experiencia visual deve se aproximar de uma ligacao do WhatsApp;
+  - o toque de chamada recebida ainda precisa existir;
+  - a rota de audio Android precisa ser revista, pois o teste saiu em viva-voz em vez de fone do aparelho;
+  - a lista de unidades deve ficar mais enxuta, com acao de ligar por icone.
 
 Regras de seguranca:
 
@@ -390,6 +398,12 @@ Escopo previsto restante:
 - Sair da sala ao chamar `end_call`.
 - Validar em development build Android.
 - Validar audio real entre duas sessoes com morador e portaria.
+- Refinar UX de chamada:
+  - uma unica acao para chamar e entrar no audio quando atendida;
+  - tela dedicada para tocando, recebendo, conectando e em chamada;
+  - feedback sonoro de chamada recebida;
+  - lista de unidades compacta com icone de chamada.
+- Ajustar roteamento de audio nativo para priorizar o fone do aparelho no uso comum.
 - Evoluir UX de reconexao/erro depois do primeiro teste nativo.
 
 ### Fase 3 - Notificacoes e background
