@@ -117,6 +117,18 @@ Registro da primeira build Android:
 - A causa foi a linha `expo-dev-client@55` em um app Expo SDK 54.
 - A correcao esperada para a proxima tentativa e manter `expo-dev-client@~6.0.21` e confirmar `npx expo install --check` sem pendencias.
 
+Registro da segunda build Android:
+
+- A build EAS de desenvolvimento foi concluida com sucesso:
+  - build `a1f446c8-a1f4-4014-b227-f53d17c1d917`.
+- A partir dela, a validacao de voz sai do navegador e deve ser feita no Android instalado:
+  - instalar o APK/development build;
+  - iniciar o Metro Bundler para o app local quando necessario;
+  - logar em duas sessoes de teste;
+  - atender a chamada;
+  - conectar as duas pontas ao audio LiveKit;
+  - validar microfone, mute e encerramento.
+
 ## Estrutura sugerida
 
 Pode ser criado um novo projeto de testes, por exemplo:

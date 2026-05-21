@@ -366,6 +366,10 @@ Entregas iniciadas:
   - `expo-dev-client@55` puxava `expo-dev-menu` incompatível com Expo SDK 54;
   - dependencia corrigida para a versao esperada pelo SDK 54:
     - `expo-dev-client@~6.0.21`.
+- Segunda build EAS Android de desenvolvimento concluida com sucesso:
+  - build `a1f446c8-a1f4-4014-b227-f53d17c1d917`;
+  - artefato interno disponivel para instalar o development build no Android;
+  - proximo teste nativo passa a ser abrir o app no aparelho e validar chamada com audio LiveKit entre duas sessoes.
 
 Regras de seguranca:
 
@@ -384,7 +388,6 @@ Observacao tecnica:
 Escopo previsto restante:
 
 - Sair da sala ao chamar `end_call`.
-- Gerar nova tentativa de APK Android de development build apos o alinhamento do `expo-dev-client`.
 - Validar em development build Android.
 - Validar audio real entre duas sessoes com morador e portaria.
 - Evoluir UX de reconexao/erro depois do primeiro teste nativo.
