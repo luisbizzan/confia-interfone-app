@@ -333,6 +333,11 @@ Entregas iniciadas:
 - Expo configurado com plugins nativos do LiveKit/WebRTC.
 - Permissoes de microfone configuradas para Android e iOS.
 - Backend passa a ter a Edge Function `livekit-token`.
+- Projeto LiveKit Cloud `confia-interfone` criado.
+- Secrets do LiveKit cadastradas no Supabase:
+  - `LIVEKIT_URL`
+  - `LIVEKIT_API_KEY`
+  - `LIVEKIT_API_SECRET`
 - App passa a solicitar token temporario de voz pelo `call_id`.
 - Painel de chamada em andamento passa a ter acao `Preparar audio`.
 
@@ -351,11 +356,6 @@ Observacao tecnica:
 
 Escopo previsto restante:
 
-- Configurar secrets do LiveKit no Supabase:
-  - `LIVEKIT_URL`
-  - `LIVEKIT_API_KEY`
-  - `LIVEKIT_API_SECRET`
-- Publicar a Edge Function `livekit-token`.
 - Conectar sala LiveKit no app quando a chamada estiver `ANSWERED`.
 - Publicar somente audio/microfone no MVP.
 - Mutar/desmutar microfone.

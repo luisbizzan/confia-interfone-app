@@ -85,6 +85,13 @@ Para a Fase 2 com LiveKit, Playwright pode validar:
 - resposta contem `serverUrl`, `roomName` e `token`;
 - erro de token indisponivel aparece em tela quando secrets nao estiverem configurados.
 
+Estado atual da infraestrutura LiveKit:
+
+- projeto LiveKit Cloud criado;
+- secrets cadastradas no Supabase;
+- testes nao devem registrar nem imprimir `LIVEKIT_API_SECRET`;
+- se uma chave for exposta em logs ou conversa, ela deve ser revogada antes de piloto real.
+
 Validacao real de microfone/audio deve ser feita com:
 
 - development build Expo;
