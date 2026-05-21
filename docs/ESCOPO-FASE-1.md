@@ -339,7 +339,18 @@ Entregas iniciadas:
   - `LIVEKIT_API_KEY`
   - `LIVEKIT_API_SECRET`
 - App passa a solicitar token temporario de voz pelo `call_id`.
-- Painel de chamada em andamento passa a ter acao `Preparar audio`.
+- LiveKit e registrado no bootstrap do app com `registerGlobals()`.
+- Painel de chamada em andamento passa a ter acao `Entrar no audio`.
+- Depois do token, o app conecta a sala LiveKit com:
+  - audio publicado;
+  - video desabilitado;
+  - sessao de audio nativa durante a chamada.
+- Sala conectada passa a exibir estado de conexao e controle:
+  - `Mutar microfone`;
+  - `Ativar microfone`.
+- Integracao LiveKit foi separada por plataforma:
+  - Android/iOS carregam WebRTC nativo, audio real e controles de microfone;
+  - web continua validando token e fluxo transacional sem carregar modulo nativo.
 
 Regras de seguranca:
 
@@ -353,14 +364,14 @@ Observacao tecnica:
 
 - LiveKit em Expo exige development build com `expo-dev-client`.
 - Expo Go nao suporta os modulos nativos de WebRTC exigidos pelo LiveKit.
+- A visualizacao web continua util para login, chamadas, atendimento e validacao de token.
 
 Escopo previsto restante:
 
-- Conectar sala LiveKit no app quando a chamada estiver `ANSWERED`.
-- Publicar somente audio/microfone no MVP.
-- Mutar/desmutar microfone.
 - Sair da sala ao chamar `end_call`.
 - Validar em development build Android.
+- Validar audio real entre duas sessoes com morador e portaria.
+- Evoluir UX de reconexao/erro depois do primeiro teste nativo.
 
 ### Fase 3 - Notificacoes e background
 

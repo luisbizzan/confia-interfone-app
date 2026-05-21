@@ -1,4 +1,6 @@
-import { useState } from 'react';
+import { AudioSession, LiveKitRoom, useConnectionState, useRoomContext } from '@livekit/react-native';
+import { ConnectionState } from 'livekit-client';
+import { useEffect, useState } from 'react';
 import { StyleSheet, Text, View } from 'react-native';
 
 import { getLiveKitJoinInfo, type LiveKitJoinInfo } from '../services/livekit';
@@ -30,21 +32,99 @@ export function VoiceJoinPanel({ callId }: VoiceJoinPanelProps) {
 
   return (
     <View style={styles.container}>
-      <PrimaryButton
-        disabled={isLoading}
-        label={isLoading ? 'Preparando audio...' : joinInfo ? 'Audio preparado' : 'Preparar audio'}
-        testID={joinInfo ? 'voice-ready' : 'voice-prepare'}
-        tone={joinInfo ? 'neutral' : 'primary'}
-        onPress={handlePrepareAudio}
-      />
       {joinInfo ? (
-        <Text style={styles.success}>Sala LiveKit pronta: {joinInfo.roomName}</Text>
+        <VoiceRoom joinInfo={joinInfo} onError={setError} />
       ) : (
-        <Text style={styles.hint}>A conexao de voz sera ativada com token temporario do backend.</Text>
+        <>
+          <PrimaryButton
+            disabled={isLoading}
+            label={isLoading ? 'Conectando audio...' : 'Entrar no audio'}
+            testID="voice-prepare"
+            onPress={handlePrepareAudio}
+          />
+          <Text style={styles.hint}>Entre no audio depois que a chamada for atendida.</Text>
+        </>
       )}
       {error ? <Text style={styles.error}>{error}</Text> : null}
     </View>
   );
+}
+
+function VoiceRoom({ joinInfo, onError }: { joinInfo: LiveKitJoinInfo; onError: (message: string | null) => void }) {
+  useEffect(() => {
+    AudioSession.startAudioSession().catch(() => {
+      onError('Nao foi possivel iniciar a sessao de audio do dispositivo.');
+    });
+
+    return () => {
+      AudioSession.stopAudioSession().catch(() => undefined);
+    };
+  }, [onError]);
+
+  return (
+    <View style={styles.room} testID="voice-ready">
+      <LiveKitRoom
+        audio
+        connect
+        serverUrl={joinInfo.serverUrl}
+        token={joinInfo.token}
+        video={false}
+        onConnected={() => onError(null)}
+        onError={(roomError) => onError(roomError.message || 'Falha ao conectar audio.')}
+        onMediaDeviceFailure={() => onError('Microfone indisponivel para esta chamada.')}
+      >
+        <VoiceRoomControls roomName={joinInfo.roomName} onError={onError} />
+      </LiveKitRoom>
+    </View>
+  );
+}
+
+function VoiceRoomControls({ roomName, onError }: { roomName: string; onError: (message: string | null) => void }) {
+  const connectionState = useConnectionState();
+  const room = useRoomContext();
+  const [microphoneEnabled, setMicrophoneEnabled] = useState(true);
+  const [isChangingMicrophone, setIsChangingMicrophone] = useState(false);
+
+  async function handleToggleMicrophone() {
+    setIsChangingMicrophone(true);
+
+    try {
+      const nextState = !microphoneEnabled;
+      await room.localParticipant.setMicrophoneEnabled(nextState);
+      setMicrophoneEnabled(nextState);
+      onError(null);
+    } catch (err) {
+      onError(err instanceof Error ? err.message : 'Nao foi possivel alterar o microfone.');
+    } finally {
+      setIsChangingMicrophone(false);
+    }
+  }
+
+  return (
+    <View style={styles.roomControls}>
+      <Text style={styles.success}>Audio {voiceConnectionLabel(connectionState)}</Text>
+      <Text style={styles.hint}>Sala segura: {roomName}</Text>
+      <PrimaryButton
+        disabled={isChangingMicrophone || connectionState !== ConnectionState.Connected}
+        label={microphoneEnabled ? 'Mutar microfone' : 'Ativar microfone'}
+        testID="voice-microphone-toggle"
+        tone="neutral"
+        onPress={handleToggleMicrophone}
+      />
+    </View>
+  );
+}
+
+function voiceConnectionLabel(connectionState: ConnectionState) {
+  const labels: Record<ConnectionState, string> = {
+    [ConnectionState.Connected]: 'conectado',
+    [ConnectionState.Connecting]: 'conectando',
+    [ConnectionState.Disconnected]: 'desconectado',
+    [ConnectionState.Reconnecting]: 'reconectando',
+    [ConnectionState.SignalReconnecting]: 'reconectando sinal',
+  };
+
+  return labels[connectionState];
 }
 
 const styles = StyleSheet.create({
@@ -58,6 +138,15 @@ const styles = StyleSheet.create({
   },
   hint: {
     color: theme.colors.muted,
+  },
+  room: {
+    borderColor: theme.colors.border,
+    borderRadius: theme.radius.sm,
+    borderWidth: 1,
+    padding: theme.spacing.md,
+  },
+  roomControls: {
+    gap: theme.spacing.sm,
   },
   success: {
     color: theme.colors.success,

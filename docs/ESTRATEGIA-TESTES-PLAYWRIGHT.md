@@ -80,9 +80,10 @@ Para a Fase 2 com LiveKit, Playwright pode validar:
 
 - chamada passa para `ANSWERED`;
 - painel `Chamada em andamento` aparece;
-- botao `Preparar audio` aparece;
+- botao `Entrar no audio` aparece;
 - app chama a Edge Function `livekit-token`;
 - resposta contem `serverUrl`, `roomName` e `token`;
+- web renderiza estado de token LiveKit pronto apos resposta valida;
 - erro de token indisponivel aparece em tela quando secrets nao estiverem configurados.
 
 Estado atual da infraestrutura LiveKit:
@@ -97,6 +98,13 @@ Validacao real de microfone/audio deve ser feita com:
 - development build Expo;
 - teste manual assistido em Android/iOS;
 - posteriormente Maestro, Detox ou Appium.
+
+No development build nativo, validar tambem:
+
+- conexao de sala LiveKit em chamada `ANSWERED`;
+- audio bidirecional entre morador e portaria;
+- controle `Mutar microfone` e `Ativar microfone`;
+- desconexao da sala ao encerrar a chamada.
 
 ## Estrutura sugerida
 
@@ -317,12 +325,14 @@ resident-active-call-end
 resident-active-call-auto-refresh
 resident-voice-prepare
 resident-voice-ready
+resident-voice-microphone-toggle
 resident-unit-unavailable
 gatehouse-call-unit
 gatehouse-pending-call-answer
 gatehouse-active-call-end
 gatehouse-voice-prepare
 gatehouse-voice-ready
+gatehouse-voice-microphone-toggle
 call-history-list
 ```
 
