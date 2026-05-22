@@ -417,6 +417,14 @@ Entregas iniciadas:
   - cadastro de novo condominio no backoffice ganhou checkbox `Habilitar Interfone Digital neste condominio`;
   - criacao de chamadas passa a ser bloqueada pelo banco se `INTERCOM` estiver desabilitado;
   - leituras administrativas e `get_current_user_context()` passam a retornar o mapa de recursos.
+- Observabilidade de erros - Fase 1:
+  - criada captura global de excecoes JavaScript no app;
+  - criada `AppErrorBoundary` para erros de renderizacao React;
+  - usuario passa a ver tela amigavel informando que o erro foi reportado ao time tecnico;
+  - relatorios sao enviados para a tabela `app_error_reports` no Supabase;
+  - relatorio inclui mensagem, stacktrace, component stack, rota atual, plataforma, versao do app, usuario, perfil, condominio e metadados sanitizados;
+  - tokens, senhas e segredos sao removidos dos metadados antes do envio;
+  - falhas no proprio envio do relatorio nao geram novo erro para o usuario.
 
 Regras de seguranca:
 
@@ -446,6 +454,8 @@ Escopo previsto restante:
 - Evoluir UX de reconexao/erro depois do primeiro teste nativo.
 - Gerar novo APK/development build depois da inclusao de `expo-audio`, pois o toque nativo nao entra apenas com reload do Metro.
 - Testar recurso `INTERCOM = false` em um condominio novo para validar home sem atalho de interfone.
+- Validar em device real a tela amigavel de erro e a gravacao em `app_error_reports`.
+- Fase 2 de observabilidade: criar Edge Function para deduplicar relatorios e abrir/atualizar issue no GitHub automaticamente.
 
 ### Fase 3 - Notificacoes e background
 

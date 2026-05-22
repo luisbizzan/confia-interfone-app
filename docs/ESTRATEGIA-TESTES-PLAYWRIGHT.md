@@ -52,6 +52,8 @@ Fluxos prioritarios:
 - atalho `Interfone` abre a experiencia operacional quando `INTERCOM = true`;
 - atalho `Interfone` fica ausente ou indisponivel quando `INTERCOM = false`;
 - aba `Configuracoes` mostra perfil e recursos do condominio;
+- erro de renderizacao mostra tela amigavel de erro reportado;
+- app grava relatorio em `app_error_reports` sem expor senha, token ou segredo;
 - morador chama portaria;
 - portaria ve chamada pendente;
 - portaria atende chamada;
@@ -197,6 +199,25 @@ Atualizacao apos toque/vibracao de chamada recebida:
   - toque e vibracao param ao atender;
   - toque e vibracao param ao cancelar/encerrar;
   - toque nao permanece em loop ao voltar para home.
+
+Atualizacao apos observabilidade de erros - Fase 1:
+
+- Playwright deve validar a experiencia web de erro controlado usando uma rota/flag de teste futura, sem quebrar dados reais.
+- Criterios:
+  - ao provocar erro de renderizacao, a tela amigavel aparece;
+  - mensagem nao exibe stacktrace para o usuario final;
+  - relatorio e enviado ao Supabase;
+  - payload contem `source`, `message`, `stack`, `component_stack`, `route`, `platform`, `app_version`, `user_id`, `condominium_id` e `profile`;
+  - payload nao contem senha, JWT, `apikey`, `service_role`, `ADMIN_API_SECRET`, `LIVEKIT_API_SECRET` ou outros segredos.
+- Testes nativos devem complementar:
+  - erro em Android instalado;
+  - app continua recuperavel pelo botao `Tentar novamente`;
+  - erro offline nao quebra o app;
+  - ao voltar a ficar online, estrategia futura pode reenviar eventos pendentes.
+- Fase 2 da estrategia:
+  - validar Edge Function de deduplicacao;
+  - validar criacao/atualizacao de issue no GitHub;
+  - validar rate limit para nao criar spam de issues.
 
 ## Estrutura sugerida
 

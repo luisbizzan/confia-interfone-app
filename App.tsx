@@ -3,18 +3,44 @@ import { MaterialIcons } from '@expo/vector-icons';
 import { useEffect, useState } from 'react';
 import { ActivityIndicator, Platform, SafeAreaView, ScrollView, StatusBar as NativeStatusBar, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 
+import { AppErrorBoundary } from './src/components/AppErrorBoundary';
 import { AppHomeScreen } from './src/screens/AppHomeScreen';
 import { LoginScreen } from './src/screens/LoginScreen';
 import { ResidentHomeScreen } from './src/screens/ResidentHomeScreen';
 import { GatehouseHomeScreen } from './src/screens/GatehouseHomeScreen';
 import { loadCurrentAuthState, signInWithEmail, signOut, type LoadedAuthState } from './src/services/auth';
+import { clearErrorReportingContext, registerGlobalErrorHandlers, reportAppError, setErrorReportingContext } from './src/services/error-reporting';
 import { theme } from './src/theme/theme';
 import type { AuthenticatedUser, UserContext } from './src/types/domain';
 
 export default function App() {
+  return (
+    <AppErrorBoundary>
+      <AppContent />
+    </AppErrorBoundary>
+  );
+}
+
+function AppContent() {
   const [authState, setAuthState] = useState<LoadedAuthState>({ status: 'unauthenticated' });
   const [isBooting, setIsBooting] = useState(true);
   const [activeView, setActiveView] = useState<'home' | 'intercom' | 'settings'>('home');
+
+  useEffect(() => {
+    registerGlobalErrorHandlers();
+  }, []);
+
+  useEffect(() => {
+    if (authState.status === 'authenticated') {
+      setErrorReportingContext({
+        route: activeView,
+        user: authState.user,
+      });
+      return;
+    }
+
+    clearErrorReportingContext();
+  }, [activeView, authState]);
 
   useEffect(() => {
     let mounted = true;
@@ -25,7 +51,8 @@ export default function App() {
           setAuthState(state);
         }
       })
-      .catch(() => {
+      .catch((error) => {
+        void reportAppError(error, { source: 'auth-bootstrap' });
         if (mounted) {
           setAuthState({ status: 'unauthenticated' });
         }
