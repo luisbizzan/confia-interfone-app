@@ -32,6 +32,9 @@ Fluxos prioritarios:
 - validar tela de portaria;
 - validar tela de chamadas;
 - validar tela de configuracoes/health check;
+- criar condominio com `INTERCOM` habilitado;
+- criar condominio com `INTERCOM` desabilitado;
+- validar que a listagem administrativa exibe o status do recurso Interfone;
 - validar regras de permissao:
   - `CONSULTOR` pode criar;
   - exclusoes futuras devem exigir `ADMIN`.
@@ -45,6 +48,10 @@ Fluxos prioritarios:
 - login como portaria;
 - login como morador;
 - identificacao automatica de perfil;
+- home principal aparece apos login;
+- atalho `Interfone` abre a experiencia operacional quando `INTERCOM = true`;
+- atalho `Interfone` fica ausente ou indisponivel quando `INTERCOM = false`;
+- aba `Configuracoes` mostra perfil e recursos do condominio;
 - morador chama portaria;
 - portaria ve chamada pendente;
 - portaria atende chamada;
@@ -162,7 +169,34 @@ Atualizacao de UX aplicada depois do primeiro feedback nativo:
   - a tela de ligacao nao expoe o nome tecnico da sala LiveKit;
   - o alternador de saida troca entre fone e viva-voz com a sala conectada.
   - cabecalho Android respeita a barra de status do aparelho.
-  - a tela de espera da chamada nao oferece acao manual `Atualizar estado` para o usuario final.
+- a tela de espera da chamada nao oferece acao manual `Atualizar estado` para o usuario final.
+
+Atualizacao apos modularizacao por recursos:
+
+- O app passa a ter uma home principal com atalhos.
+- `INTERCOM` e o primeiro feature flag operacional consumido pelo app.
+- Playwright deve validar o caminho:
+  - login;
+  - home;
+  - abrir Interfone pelo atalho;
+  - voltar para Inicio pela navegacao inferior;
+  - abrir Configuracoes;
+  - conferir que Interfone aparece como habilitado.
+- Em massa de teste com `INTERCOM = false`, Playwright deve validar que:
+  - home nao permite acessar a operacao do Interfone;
+  - navegacao inferior nao mostra a aba Interfone;
+  - Configuracoes mostra o recurso como indisponivel.
+
+Atualizacao apos toque/vibracao de chamada recebida:
+
+- Playwright web deve validar apenas a tela visual de chamada recebida.
+- Toque local e vibracao devem ser validados em teste nativo manual ou suite mobile, porque dependem de modulo nativo e comportamento do aparelho.
+- No checklist nativo, validar:
+  - chamada recebida toca enquanto esta em `RINGING`;
+  - Android vibra durante chamada recebida;
+  - toque e vibracao param ao atender;
+  - toque e vibracao param ao cancelar/encerrar;
+  - toque nao permanece em loop ao voltar para home.
 
 ## Estrutura sugerida
 

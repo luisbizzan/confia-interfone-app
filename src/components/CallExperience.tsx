@@ -1,6 +1,8 @@
 import type { ReactNode } from 'react';
 import { MaterialIcons } from '@expo/vector-icons';
-import { StyleSheet, Text, View } from 'react-native';
+import { useAudioPlayer } from 'expo-audio';
+import { useEffect } from 'react';
+import { Platform, StyleSheet, Text, Vibration, View } from 'react-native';
 
 import { theme } from '../theme/theme';
 import type { CallRecord } from '../types/domain';
@@ -32,6 +34,8 @@ export function IncomingCallExperience({
   startedAt,
   targetLabel,
 }: IncomingCallExperienceProps) {
+  useIncomingCallAlert();
+
   return (
     <CallStage
       eyebrow="Chamada recebida"
@@ -45,6 +49,27 @@ export function IncomingCallExperience({
       </View>
     </CallStage>
   );
+}
+
+function useIncomingCallAlert() {
+  const ringtone = useAudioPlayer(require('../../assets/incoming-call.wav'));
+
+  useEffect(() => {
+    ringtone.loop = true;
+    ringtone.play();
+
+    if (Platform.OS === 'android') {
+      Vibration.vibrate([0, 700, 650], true);
+    } else {
+      Vibration.vibrate();
+    }
+
+    return () => {
+      ringtone.pause();
+      ringtone.seekTo(0);
+      Vibration.cancel();
+    };
+  }, [ringtone]);
 }
 
 export function OutgoingCallExperience({ call, onCancel }: OutgoingCallExperienceProps) {

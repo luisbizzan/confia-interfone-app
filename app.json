@@ -34,7 +34,8 @@
         "android.permission.INTERNET",
         "android.permission.SYSTEM_ALERT_WINDOW",
         "android.permission.WAKE_LOCK",
-        "android.permission.BLUETOOTH"
+        "android.permission.BLUETOOTH",
+        "android.permission.VIBRATE"
       ],
       "predictiveBackGestureEnabled": false
     },
@@ -51,7 +52,8 @@
     "plugins": [
       "expo-secure-store",
       "@livekit/react-native-expo-plugin",
-      "@config-plugins/react-native-webrtc"
+      "@config-plugins/react-native-webrtc",
+      "expo-audio"
     ],
     "owner": "luisbizzan"
   }

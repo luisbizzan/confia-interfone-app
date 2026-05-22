@@ -396,6 +396,27 @@ Entregas iniciadas:
   - controle de saida de audio permite alternar entre fone e viva-voz quando a conexao LiveKit estiver pronta.
   - cabecalho no Android ganhou respiro da barra de status para nao sobrepor os indicadores do aparelho.
   - tela de chamada originada deixou de expor o botao tecnico `Atualizar estado`, mantendo apenas espera automatica e cancelamento.
+- Evolucao modular do app aplicada:
+  - app passou a abrir em uma home principal depois do login;
+  - Interfone virou um atalho/recurso da home, preparando o app para novas funcionalidades futuras;
+  - navegacao inferior adicionada com `Inicio`, `Interfone` e `Configuracoes`;
+  - tela de configuracoes mostra perfil logado e recursos disponiveis para o condominio;
+  - contrato do app passa a ler `context.features` retornado pelo backend;
+  - recurso inicial `INTERCOM` controla se o atalho do interfone aparece;
+  - quando `INTERCOM = false`, o app nao oferece entrada operacional no interfone;
+  - por compatibilidade, se `features` ainda nao vier do backend antigo, o app trata o interfone como habilitado.
+- Alerta de chamada recebida aplicado:
+  - chamada recebida passa a tocar um arquivo local `incoming-call.wav`;
+  - no Android, a chamada recebida tambem vibra em repeticao enquanto a tela de recebimento estiver aberta;
+  - ao atender, cancelar, sair da tela ou deixar de receber a chamada, o toque e a vibracao sao interrompidos;
+  - `expo-audio` foi adicionado ao app para tocar o alerta local;
+  - permissao Android `android.permission.VIBRATE` foi adicionada.
+- Evolucao do backend/backoffice relacionada:
+  - criada tabela `condominium_features`;
+  - condominios existentes recebem `INTERCOM = true`;
+  - cadastro de novo condominio no backoffice ganhou checkbox `Habilitar Interfone Digital neste condominio`;
+  - criacao de chamadas passa a ser bloqueada pelo banco se `INTERCOM` estiver desabilitado;
+  - leituras administrativas e `get_current_user_context()` passam a retornar o mapa de recursos.
 
 Regras de seguranca:
 
@@ -423,6 +444,8 @@ Escopo previsto restante:
   - evoluir feedback de reconexao/erro sem expor detalhes tecnicos.
 - Validar roteamento de audio nativo com prioridade para o fone do aparelho no uso comum.
 - Evoluir UX de reconexao/erro depois do primeiro teste nativo.
+- Gerar novo APK/development build depois da inclusao de `expo-audio`, pois o toque nativo nao entra apenas com reload do Metro.
+- Testar recurso `INTERCOM = false` em um condominio novo para validar home sem atalho de interfone.
 
 ### Fase 3 - Notificacoes e background
 

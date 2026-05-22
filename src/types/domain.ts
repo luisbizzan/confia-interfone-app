@@ -48,6 +48,7 @@ export type UserContextPortariaDevice = {
 
 export type UserContext = {
   profile: UserContextProfile;
+  features: Record<string, boolean>;
   unit_members: UserContextUnit[];
   portaria_devices: UserContextPortariaDevice[];
 };
