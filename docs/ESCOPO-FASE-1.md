@@ -425,6 +425,13 @@ Entregas iniciadas:
   - relatorio inclui mensagem, stacktrace, component stack, rota atual, plataforma, versao do app, usuario, perfil, condominio e metadados sanitizados;
   - tokens, senhas e segredos sao removidos dos metadados antes do envio;
   - falhas no proprio envio do relatorio nao geram novo erro para o usuario.
+- Observabilidade de erros - Fase 2:
+  - app passa a enviar relatorios para a Edge Function `report-app-error`;
+  - a Edge Function autentica o usuario, grava o relatorio e gera assinatura de deduplicacao;
+  - quando `GITHUB_TOKEN` e `GITHUB_REPOSITORY` estiverem configurados no Supabase, a funcao cria issue no GitHub;
+  - erros repetidos usam a mesma assinatura e reaproveitam a issue existente;
+  - se o GitHub ainda nao estiver configurado, o relatorio fica salvo no Supabase e a resposta marca `github.status = skipped`;
+  - o app mantem fallback de insert direto na tabela caso a Edge Function esteja indisponivel.
 
 Regras de seguranca:
 
@@ -455,7 +462,8 @@ Escopo previsto restante:
 - Gerar novo APK/development build depois da inclusao de `expo-audio`, pois o toque nativo nao entra apenas com reload do Metro.
 - Testar recurso `INTERCOM = false` em um condominio novo para validar home sem atalho de interfone.
 - Validar em device real a tela amigavel de erro e a gravacao em `app_error_reports`.
-- Fase 2 de observabilidade: criar Edge Function para deduplicar relatorios e abrir/atualizar issue no GitHub automaticamente.
+- Configurar secrets `GITHUB_TOKEN` e `GITHUB_REPOSITORY` no Supabase para ativar criacao real de issues.
+- Validar deduplicacao criando duas ocorrencias do mesmo erro e conferindo que a issue e reaproveitada.
 
 ### Fase 3 - Notificacoes e background
 

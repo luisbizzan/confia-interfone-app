@@ -215,9 +215,14 @@ Atualizacao apos observabilidade de erros - Fase 1:
   - erro offline nao quebra o app;
   - ao voltar a ficar online, estrategia futura pode reenviar eventos pendentes.
 - Fase 2 da estrategia:
-  - validar Edge Function de deduplicacao;
-  - validar criacao/atualizacao de issue no GitHub;
-  - validar rate limit para nao criar spam de issues.
+  - validar Edge Function `report-app-error`;
+  - validar que o app envia o relatorio para a funcao;
+  - validar fallback de insert direto apenas quando a funcao estiver indisponivel;
+  - validar que `github.status = skipped` quando os secrets do GitHub nao existem;
+  - validar criacao de issue no GitHub quando `GITHUB_TOKEN` e `GITHUB_REPOSITORY` estiverem configurados;
+  - validar deduplicacao por `signature`;
+  - validar que duas ocorrencias iguais reaproveitam a mesma issue e incrementam `occurrence_count`;
+  - validar rate limit antes de liberar em piloto com muitos usuarios.
 
 ## Estrutura sugerida
 

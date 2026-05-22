@@ -41,27 +41,40 @@ export async function reportAppError(error: unknown, options: ReportOptions) {
 
   const normalized = normalizeError(error);
   const user = context.user;
+  const reportPayload = {
+    app_version: Constants.expoConfig?.version ?? null,
+    call_id: getString(options.metadata?.callId) ?? null,
+    component_stack: truncate(options.componentStack, 6000),
+    device_model: getDeviceModel(),
+    message: truncate(normalized.message, 1200),
+    metadata: sanitizeMetadata({
+      ...options.metadata,
+      route: context.route,
+    }),
+    os_version: String(Platform.Version ?? ''),
+    platform: Platform.OS,
+    profile: user?.profile ?? null,
+    route: context.route ?? null,
+    source: options.source,
+    stack: truncate(normalized.stack, 12000),
+  };
 
   try {
-    await supabase.from('app_error_reports').insert({
-      app_version: Constants.expoConfig?.version ?? null,
-      call_id: getString(options.metadata?.callId) ?? null,
-      component_stack: truncate(options.componentStack, 6000),
-      condominium_id: user?.condominiumId ?? null,
-      device_model: getDeviceModel(),
-      message: truncate(normalized.message, 1200),
-      metadata: sanitizeMetadata({
-        ...options.metadata,
-        route: context.route,
-      }),
-      os_version: String(Platform.Version ?? ''),
-      platform: Platform.OS,
-      profile: user?.profile ?? null,
-      route: context.route ?? null,
-      source: options.source,
-      stack: truncate(normalized.stack, 12000),
-      user_id: user?.id ?? null,
+    const { error: functionError } = await supabase.functions.invoke('report-app-error', {
+      body: reportPayload,
     });
+
+    if (!functionError) {
+      return;
+    }
+
+    if (user) {
+      await supabase.from('app_error_reports').insert({
+        ...reportPayload,
+        condominium_id: user.condominiumId,
+        user_id: user.id,
+      });
+    }
   } catch {
     // Reporting must never create a second user-facing failure.
   }
