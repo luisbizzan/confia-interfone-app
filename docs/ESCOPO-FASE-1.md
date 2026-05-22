@@ -378,6 +378,16 @@ Entregas iniciadas:
   - o toque de chamada recebida ainda precisa existir;
   - a rota de audio Android precisa ser revista, pois o teste saiu em viva-voz em vez de fone do aparelho;
   - a lista de unidades deve ficar mais enxuta, com acao de ligar por icone.
+- Primeiro ajuste de UX de ligacao aplicado no app:
+  - chamada recebida agora abre experiencia focada de atendimento;
+  - chamada originada em `RINGING` agora abre experiencia focada de espera/cancelamento;
+  - chamada em `ANSWERED` agora abre experiencia focada de chamada em andamento;
+  - o audio LiveKit passa a preparar a conexao automaticamente na chamada atendida;
+  - o historico deixou de ficar exposto na home e agora abre por acao explicita;
+  - a home do morador passou a destacar ligacao para portaria em acao compacta;
+  - listas de unidades de morador e portaria ficaram mais compactas e usam acao circular de telefone;
+  - chamadas para unidade atualizam o estado imediatamente depois da criacao para abrir a tela de espera sem aguardar o proximo polling;
+  - sessao de audio LiveKit passa a priorizar earpiece/fone no Android e saida de earpiece no iOS.
 
 Regras de seguranca:
 
@@ -399,11 +409,11 @@ Escopo previsto restante:
 - Validar em development build Android.
 - Validar audio real entre duas sessoes com morador e portaria.
 - Refinar UX de chamada:
-  - uma unica acao para chamar e entrar no audio quando atendida;
-  - tela dedicada para tocando, recebendo, conectando e em chamada;
+  - validar no aparelho a conexao automatica do audio depois do atendimento;
+  - validar no aparelho a tela dedicada para tocando, recebendo e em chamada;
   - feedback sonoro de chamada recebida;
-  - lista de unidades compacta com icone de chamada.
-- Ajustar roteamento de audio nativo para priorizar o fone do aparelho no uso comum.
+  - evoluir a tela de chamada com controles de alto-falante e melhor feedback de reconexao.
+- Validar roteamento de audio nativo com prioridade para o fone do aparelho no uso comum.
 - Evoluir UX de reconexao/erro depois do primeiro teste nativo.
 
 ### Fase 3 - Notificacoes e background

@@ -79,10 +79,10 @@ Na primeira etapa, Playwright cobre o app pelo modo web. Depois, quando houver v
 Para a Fase 2 com LiveKit, Playwright pode validar:
 
 - chamada passa para `ANSWERED`;
-- painel `Chamada em andamento` aparece;
-- botao `Entrar no audio` aparece;
+- experiencia focada `Em chamada` aparece;
 - app chama a Edge Function `livekit-token`;
 - resposta contem `serverUrl`, `roomName` e `token`;
+- web prepara o token LiveKit automaticamente apos chamada atendida;
 - web renderiza estado de token LiveKit pronto apos resposta valida;
 - erro de token indisponivel aparece em tela quando secrets nao estiverem configurados.
 
@@ -144,6 +144,18 @@ Feedback observado no primeiro teste Android de voz:
 - Teste nativo adicional obrigatorio:
   - confirmar que o audio padrao sai pelo fone do aparelho e nao inicia sempre em viva-voz;
   - validar troca controlada para alto-falante quando essa opcao existir.
+
+Atualizacao de UX aplicada depois do primeiro feedback nativo:
+
+- Morador e portaria deixam de manter chamada misturada a home quando existe estado ativo:
+  - chamada recebida abre tela focada de atendimento;
+  - chamada originada em `RINGING` abre tela focada de espera e cancelamento;
+  - chamada `ANSWERED` abre tela focada de ligacao.
+- O painel de voz da chamada atendida passa a preparar o audio automaticamente.
+- O historico fica oculto na home ate a acao `Ver historico`.
+- Listas de unidades ficam compactas e a acao de ligar passa a usar botao circular com icone de telefone.
+- A chamada iniciada para unidade deve abrir a tela de espera logo depois da criacao, sem depender do proximo polling.
+- O teste nativo deve confirmar a configuracao de rota de audio priorizando earpiece antes do alto-falante.
 
 ## Estrutura sugerida
 
@@ -358,15 +370,16 @@ login-email
 login-password
 login-submit
 resident-call-gatehouse
-resident-refresh-calls
 resident-pending-call-answer
 resident-active-call-end
 resident-active-call-auto-refresh
+resident-call-unit
 resident-voice-prepare
 resident-voice-ready
 resident-voice-microphone-toggle
 resident-unit-unavailable
 gatehouse-call-unit
+gatehouse-unit-unavailable
 gatehouse-pending-call-answer
 gatehouse-active-call-end
 gatehouse-voice-prepare

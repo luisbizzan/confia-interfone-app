@@ -1,9 +1,10 @@
 import { useEffect, useMemo, useState } from 'react';
 import { Alert, StyleSheet, Text, View } from 'react-native';
 
+import { ActiveCallExperience, IncomingCallExperience, OutgoingCallExperience } from '../components/CallExperience';
 import { Card } from '../components/Card';
+import { PhoneActionButton } from '../components/PhoneActionButton';
 import { PrimaryButton } from '../components/PrimaryButton';
-import { VoiceJoinPanel } from '../components/VoiceJoinPanel';
 import { demoUnits } from '../data/demo-data';
 import {
   answerResidentCall,
@@ -34,6 +35,7 @@ export function ResidentHomeScreen({ context, directoryUnits, user }: ResidentHo
   const [pendingCalls, setPendingCalls] = useState<PendingUnitCall[]>([]);
   const [feedback, setFeedback] = useState<string | null>(null);
   const [activeCallTarget, setActiveCallTarget] = useState<string | null>(null);
+  const [showHistory, setShowHistory] = useState(false);
 
   useEffect(() => {
     refreshResidentData(unitLabels, setHistory, setPendingCalls, setFeedback);
@@ -44,6 +46,41 @@ export function ResidentHomeScreen({ context, directoryUnits, user }: ResidentHo
 
     return () => clearInterval(interval);
   }, [unitLabels]);
+
+  const activeCall = history.find((call) => call.status === 'ANSWERED' && !call.endedAt);
+  const outgoingCall = history.find((call) => call.status === 'RINGING' && !call.endedAt);
+  const incomingCall = pendingCalls[0];
+
+  if (incomingCall) {
+    return (
+      <IncomingCallExperience
+        callerLabel={pendingCallTitle(incomingCall, unitLabels)}
+        onAnswer={() => handleAnswerResidentCall(incomingCall.call_id, user.id, unitLabels, setHistory, setPendingCalls, setFeedback)}
+        onRefresh={() => refreshResidentData(unitLabels, setHistory, setPendingCalls, setFeedback)}
+        startedAt={formatDateTime(incomingCall.started_at)}
+        targetLabel="Sua unidade"
+      />
+    );
+  }
+
+  if (activeCall) {
+    return (
+      <ActiveCallExperience
+        call={activeCall}
+        onEnd={() => handleEndCall(activeCall.id, unitLabels, setHistory, setPendingCalls, setFeedback)}
+      />
+    );
+  }
+
+  if (outgoingCall) {
+    return (
+      <OutgoingCallExperience
+        call={outgoingCall}
+        onCancel={() => handleCancelCall(outgoingCall.id, unitLabels, setHistory, setPendingCalls, setFeedback)}
+        onRefresh={() => refreshResidentData(unitLabels, setHistory, setPendingCalls, setFeedback)}
+      />
+    );
+  }
 
   return (
     <View style={styles.screen}>
@@ -56,11 +93,15 @@ export function ResidentHomeScreen({ context, directoryUnits, user }: ResidentHo
       </View>
 
       <Card>
-        <Text style={styles.sectionTitle}>Acoes rapidas</Text>
-        <View style={styles.actions}>
-          <PrimaryButton
+        <View style={styles.portariaAction}>
+          <View style={styles.flex}>
+            <Text style={styles.sectionTitle}>Portaria</Text>
+            <Text style={styles.itemMeta}>Fale com a portaria do seu condominio.</Text>
+          </View>
+          <PhoneActionButton
+            accessibilityLabel="Chamar portaria"
             disabled={activeCallTarget !== null}
-            label="Chamar portaria"
+            testID="resident-call-gatehouse"
             onPress={() => {
               if (!originUnit?.unit_id) {
                 setFeedback('Nenhuma unidade liberada para iniciar chamadas.');
@@ -70,25 +111,9 @@ export function ResidentHomeScreen({ context, directoryUnits, user }: ResidentHo
               handleResidentToGatehouseCall(originUnit.unit_id, unitLabels, setHistory, setPendingCalls, setFeedback, setActiveCallTarget);
             }}
           />
-          <PrimaryButton
-            label="Atualizar chamadas"
-            tone="neutral"
-            onPress={() => refreshResidentData(unitLabels, setHistory, setPendingCalls, setFeedback)}
-          />
         </View>
         {feedback ? <Text style={styles.feedback}>{feedback}</Text> : null}
       </Card>
-
-      <PendingCallsPanel
-        calls={pendingCalls}
-        onAnswer={(callId) => handleAnswerResidentCall(callId, user.id, unitLabels, setHistory, setPendingCalls, setFeedback)}
-        unitLabels={unitLabels}
-      />
-
-      <ActiveCallsPanel
-        calls={history.filter((call) => call.status === 'ANSWERED' && !call.endedAt)}
-        onEnd={(callId) => handleEndCall(callId, unitLabels, setHistory, setPendingCalls, setFeedback)}
-      />
 
       <View style={styles.section}>
         <Text style={styles.sectionTitle}>Unidades do condominio</Text>
@@ -100,16 +125,28 @@ export function ResidentHomeScreen({ context, directoryUnits, user }: ResidentHo
               originUnitId={originUnit?.unit_id ?? null}
               setActiveCallTarget={setActiveCallTarget}
               setFeedback={setFeedback}
+              setHistory={setHistory}
+              setPendingCalls={setPendingCalls}
               unit={unit}
+              unitLabels={unitLabels}
             />
           ))}
         </View>
       </View>
 
-      <CallHistory
-        calls={history}
-        onCancel={(callId) => handleCancelCall(callId, unitLabels, setHistory, setPendingCalls, setFeedback)}
-      />
+      <View style={styles.section}>
+        <PrimaryButton
+          label={showHistory ? 'Ocultar historico' : 'Ver historico'}
+          tone="neutral"
+          onPress={() => setShowHistory((current) => !current)}
+        />
+        {showHistory ? (
+          <CallHistory
+            calls={history}
+            onCancel={(callId) => handleCancelCall(callId, unitLabels, setHistory, setPendingCalls, setFeedback)}
+          />
+        ) : null}
+      </View>
     </View>
   );
 }
@@ -139,13 +176,19 @@ function UnitCard({
   originUnitId,
   setActiveCallTarget,
   setFeedback,
+  setHistory,
+  setPendingCalls,
   unit,
+  unitLabels,
 }: {
   activeCallTarget: string | null;
   originUnitId: string | null;
   setActiveCallTarget: (target: string | null) => void;
   setFeedback: (message: string | null) => void;
+  setHistory: (history: CallRecord[]) => void;
+  setPendingCalls: (calls: PendingUnitCall[]) => void;
   unit: UnitDirectoryItem;
+  unitLabels: Map<string, string>;
 }) {
   const isOwnUnit = originUnitId === unit.id;
   const canCallUnit = Boolean(unit.canReceiveCalls && originUnitId && !isOwnUnit);
@@ -157,92 +200,38 @@ function UnitCard({
 
   return (
     <Card>
-      <View style={styles.rowBetween}>
+      <View style={styles.unitRow}>
         <View style={styles.flex}>
           <Text style={styles.itemTitle}>{unit.label}</Text>
-          <Text style={styles.itemMeta}>{unit.type}</Text>
-          <Text style={styles.itemMeta}>{unit.residents.join(', ')}</Text>
-          <Text style={styles.itemHelp}>{helper}</Text>
+          <Text style={styles.itemMeta}>
+            {unit.type} - {isOwnUnit ? 'Sua unidade' : unit.residents.join(', ')}
+          </Text>
         </View>
-        <Text style={[styles.badge, unit.canReceiveCalls ? styles.badgeSuccess : styles.badgeMuted]}>
-          {unit.canReceiveCalls ? 'Recebe' : 'Bloqueada'}
-        </Text>
-      </View>
-      <View style={styles.cardAction}>
-        <PrimaryButton
+        <PhoneActionButton
+          accessibilityLabel={isOwnUnit ? `Sua unidade ${unit.label}` : `Chamar unidade ${unit.label}`}
           disabled={!canCallUnit || activeCallTarget !== null}
-          label={isOwnUnit ? 'Sua unidade' : activeCallTarget === unit.id ? 'Chamando...' : 'Chamar unidade'}
-          tone={canCallUnit ? 'primary' : 'neutral'}
+          testID={canCallUnit ? 'resident-call-unit' : 'resident-unit-unavailable'}
           onPress={() => {
             if (!originUnitId || !canCallUnit) {
               setFeedback(helper);
               return;
             }
 
-            handleResidentToUnitCall(originUnitId, unit.id, unit.label, setFeedback, setActiveCallTarget);
+            handleResidentToUnitCall(
+              originUnitId,
+              unit.id,
+              unit.label,
+              unitLabels,
+              setHistory,
+              setPendingCalls,
+              setFeedback,
+              setActiveCallTarget,
+            );
           }}
         />
       </View>
+      <Text style={styles.itemHelp}>{activeCallTarget === unit.id ? 'Chamando...' : helper}</Text>
     </Card>
-  );
-}
-
-function PendingCallsPanel({
-  calls,
-  onAnswer,
-  unitLabels,
-}: {
-  calls: PendingUnitCall[];
-  onAnswer: (callId: string) => void;
-  unitLabels: Map<string, string>;
-}) {
-  return (
-    <View style={styles.section}>
-      <Text style={styles.sectionTitle}>Chamadas recebidas</Text>
-      <View style={styles.list}>
-        {calls.length === 0 ? (
-          <Card>
-            <Text style={styles.itemMeta}>Nenhuma chamada tocando para sua unidade.</Text>
-          </Card>
-        ) : (
-          calls.map((call) => (
-            <Card key={call.call_id}>
-              <Text style={styles.itemTitle}>{pendingCallTitle(call, unitLabels)}</Text>
-              <Text style={styles.itemMeta}>Tocando desde {formatDateTime(call.started_at)}</Text>
-              <View style={styles.cardAction}>
-                <PrimaryButton label="Atender" onPress={() => onAnswer(call.call_id)} />
-              </View>
-            </Card>
-          ))
-        )}
-      </View>
-    </View>
-  );
-}
-
-function ActiveCallsPanel({ calls, onEnd }: { calls: CallRecord[]; onEnd: (callId: string) => void }) {
-  if (calls.length === 0) {
-    return null;
-  }
-
-  return (
-    <View style={styles.section}>
-      <Text style={styles.sectionTitle}>Chamada em andamento</Text>
-      <View style={styles.list}>
-        {calls.map((call) => (
-          <Card key={call.id}>
-            <Text style={styles.itemTitle}>
-              {call.fromLabel} para {call.toLabel}
-            </Text>
-            <Text style={styles.itemMeta}>Atendida desde {call.startedAt}</Text>
-            <VoiceJoinPanel callId={call.id} />
-            <View style={styles.cardAction}>
-              <PrimaryButton label="Encerrar chamada" tone="danger" onPress={() => onEnd(call.id)} />
-            </View>
-          </Card>
-        ))}
-      </View>
-    </View>
   );
 }
 
@@ -450,6 +439,9 @@ async function handleResidentToUnitCall(
   originUnitId: string,
   targetUnitId: string,
   targetLabel: string,
+  unitLabels: Map<string, string>,
+  setHistory: (history: CallRecord[]) => void,
+  setPendingCalls: (calls: PendingUnitCall[]) => void,
   setFeedback: (message: string | null) => void,
   setActiveCallTarget: (target: string | null) => void,
 ) {
@@ -459,6 +451,7 @@ async function handleResidentToUnitCall(
   try {
     const call = await startResidentToUnitCall(originUnitId, targetUnitId);
     setFeedback(`Chamada iniciada para ${targetLabel}. Status: ${call.status}.`);
+    await refreshResidentData(unitLabels, setHistory, setPendingCalls, setFeedback, { silent: true });
   } catch (err) {
     setFeedback(`Nao foi possivel chamar ${targetLabel}: ${err instanceof Error ? err.message : 'Tente novamente.'}`);
   } finally {
@@ -518,6 +511,12 @@ const styles = StyleSheet.create({
   list: {
     gap: theme.spacing.md,
   },
+  portariaAction: {
+    alignItems: 'center',
+    flexDirection: 'row',
+    gap: theme.spacing.md,
+    justifyContent: 'space-between',
+  },
   rowBetween: {
     alignItems: 'flex-start',
     flexDirection: 'row',
@@ -543,6 +542,12 @@ const styles = StyleSheet.create({
     fontSize: 13,
     lineHeight: 19,
     marginTop: theme.spacing.sm,
+  },
+  unitRow: {
+    alignItems: 'center',
+    flexDirection: 'row',
+    gap: theme.spacing.md,
+    justifyContent: 'space-between',
   },
   feedback: {
     color: theme.colors.primaryDark,

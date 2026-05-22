@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { StyleSheet, Text, View } from 'react-native';
 
 import { getLiveKitJoinInfo, type LiveKitJoinInfo } from '../services/livekit';
@@ -6,10 +6,11 @@ import { theme } from '../theme/theme';
 import { PrimaryButton } from './PrimaryButton';
 
 type VoiceJoinPanelProps = {
+  autoConnect?: boolean;
   callId: string;
 };
 
-export function VoiceJoinPanel({ callId }: VoiceJoinPanelProps) {
+export function VoiceJoinPanel({ autoConnect = false, callId }: VoiceJoinPanelProps) {
   const [isLoading, setIsLoading] = useState(false);
   const [joinInfo, setJoinInfo] = useState<LiveKitJoinInfo | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -27,6 +28,12 @@ export function VoiceJoinPanel({ callId }: VoiceJoinPanelProps) {
       setIsLoading(false);
     }
   }
+
+  useEffect(() => {
+    if (autoConnect) {
+      handlePrepareAudio();
+    }
+  }, [autoConnect, callId]);
 
   return (
     <View style={styles.container}>

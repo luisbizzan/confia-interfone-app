@@ -1,9 +1,10 @@
 import { useEffect, useMemo, useState } from 'react';
 import { Alert, StyleSheet, Text, View } from 'react-native';
 
+import { ActiveCallExperience, IncomingCallExperience, OutgoingCallExperience } from '../components/CallExperience';
 import { Card } from '../components/Card';
+import { PhoneActionButton } from '../components/PhoneActionButton';
 import { PrimaryButton } from '../components/PrimaryButton';
-import { VoiceJoinPanel } from '../components/VoiceJoinPanel';
 import { demoUnits } from '../data/demo-data';
 import { answerGatehouseCall, cancelCall, endCall, getMyCallHistory, getMyPendingCalls, startGatehouseToUnitCall } from '../services/calls';
 import { theme } from '../theme/theme';
@@ -25,6 +26,7 @@ export function GatehouseHomeScreen({ context, directoryUnits, user }: Gatehouse
   const [history, setHistory] = useState<CallRecord[]>([]);
   const [pendingCalls, setPendingCalls] = useState<PendingPortariaCall[]>([]);
   const [activeCallTarget, setActiveCallTarget] = useState<string | null>(null);
+  const [showHistory, setShowHistory] = useState(false);
   const ringingCalls = pendingCalls.length;
 
   useEffect(() => {
@@ -37,6 +39,41 @@ export function GatehouseHomeScreen({ context, directoryUnits, user }: Gatehouse
     return () => clearInterval(interval);
   }, [unitLabels]);
 
+  const activeCall = history.find((call) => call.status === 'ANSWERED' && !call.endedAt);
+  const outgoingCall = history.find((call) => call.status === 'RINGING' && !call.endedAt);
+  const incomingCall = pendingCalls[0];
+
+  if (incomingCall) {
+    return (
+      <IncomingCallExperience
+        callerLabel={`${unitLabels.get(incomingCall.origin_unit_id ?? incomingCall.unit_id) ?? 'Unidade'} para Portaria`}
+        onAnswer={() => handleAnswerGatehouseCall(incomingCall.call_id, unitLabels, setHistory, setPendingCalls, setFeedback)}
+        onRefresh={() => refreshGatehouseData(unitLabels, setHistory, setPendingCalls, setFeedback)}
+        startedAt={formatDateTime(incomingCall.started_at)}
+        targetLabel="Portaria"
+      />
+    );
+  }
+
+  if (activeCall) {
+    return (
+      <ActiveCallExperience
+        call={activeCall}
+        onEnd={() => handleEndCall(activeCall.id, unitLabels, setHistory, setPendingCalls, setFeedback)}
+      />
+    );
+  }
+
+  if (outgoingCall) {
+    return (
+      <OutgoingCallExperience
+        call={outgoingCall}
+        onCancel={() => handleCancelCall(outgoingCall.id, unitLabels, setHistory, setPendingCalls, setFeedback)}
+        onRefresh={() => refreshGatehouseData(unitLabels, setHistory, setPendingCalls, setFeedback)}
+      />
+    );
+  }
+
   return (
     <View style={styles.screen}>
       <View>
@@ -47,27 +84,24 @@ export function GatehouseHomeScreen({ context, directoryUnits, user }: Gatehouse
         </Text>
       </View>
 
-      <View style={styles.stats}>
-        <Card>
-          <Text style={styles.statValue}>{units.length}</Text>
-          <Text style={styles.statLabel}>Unidades</Text>
-        </Card>
-        <Card>
-          <Text style={styles.statValue}>{ringingCalls}</Text>
-          <Text style={styles.statLabel}>Tocando</Text>
-        </Card>
-      </View>
-
       <View style={styles.section}>
-        <Text style={styles.sectionTitle}>Dispositivo</Text>
         <Card>
-          <View style={styles.rowBetween}>
+          <View style={styles.deviceHeader}>
             <View style={styles.flex}>
               <Text style={styles.itemTitle}>{activeDevice?.name ?? 'Portaria principal'}</Text>
-              <Text style={styles.itemMeta}>Recebe chamadas: {activeDevice?.can_receive_calls === false ? 'Nao' : 'Sim'}</Text>
-              <Text style={styles.itemMeta}>Liga para unidades: {activeDevice?.can_make_calls === false ? 'Nao' : 'Sim'}</Text>
+              <Text style={styles.itemMeta}>{units.length} unidade(s) disponiveis para operar.</Text>
             </View>
             <Text style={styles.badge}>{activeDevice ? 'Ativo' : 'Sem vinculo'}</Text>
+          </View>
+          <View style={styles.stats}>
+            <View style={styles.statChip}>
+              <Text style={styles.statValue}>{units.length}</Text>
+              <Text style={styles.statLabel}>Unidades</Text>
+            </View>
+            <View style={styles.statChip}>
+              <Text style={styles.statValue}>{ringingCalls}</Text>
+              <Text style={styles.statLabel}>Tocando</Text>
+            </View>
           </View>
         </Card>
       </View>
@@ -81,33 +115,28 @@ export function GatehouseHomeScreen({ context, directoryUnits, user }: Gatehouse
               key={unit.id}
               setActiveCallTarget={setActiveCallTarget}
               setFeedback={setFeedback}
+              setHistory={setHistory}
+              setPendingCalls={setPendingCalls}
               unit={unit}
+              unitLabels={unitLabels}
             />
           ))}
         </View>
         {feedback ? <Text style={styles.feedback}>{feedback}</Text> : null}
       </View>
 
-      <PendingCallsPanel
-        calls={pendingCalls}
-        onAnswer={(callId) => handleAnswerGatehouseCall(callId, unitLabels, setHistory, setPendingCalls, setFeedback)}
-        unitLabels={unitLabels}
-      />
-
-      <ActiveCallsPanel
-        calls={history.filter((call) => call.status === 'ANSWERED' && !call.endedAt)}
-        onEnd={(callId) => handleEndCall(callId, unitLabels, setHistory, setPendingCalls, setFeedback)}
-      />
-
       <View style={styles.section}>
-        <View style={styles.rowBetween}>
-          <Text style={styles.sectionTitle}>Historico recente</Text>
-          <PrimaryButton label="Atualizar" tone="neutral" onPress={() => refreshGatehouseData(unitLabels, setHistory, setPendingCalls, setFeedback)} />
-        </View>
-        <CallHistory
-          calls={history}
-          onCancel={(callId) => handleCancelCall(callId, unitLabels, setHistory, setPendingCalls, setFeedback)}
+        <PrimaryButton
+          label={showHistory ? 'Ocultar historico' : 'Ver historico'}
+          tone="neutral"
+          onPress={() => setShowHistory((current) => !current)}
         />
+        {showHistory ? (
+          <CallHistory
+            calls={history}
+            onCancel={(callId) => handleCancelCall(callId, unitLabels, setHistory, setPendingCalls, setFeedback)}
+          />
+        ) : null}
       </View>
     </View>
   );
@@ -117,96 +146,49 @@ function GatehouseUnitCard({
   activeCallTarget,
   setActiveCallTarget,
   setFeedback,
+  setHistory,
+  setPendingCalls,
   unit,
+  unitLabels,
 }: {
   activeCallTarget: string | null;
   setActiveCallTarget: (target: string | null) => void;
   setFeedback: (message: string | null) => void;
+  setHistory: (history: CallRecord[]) => void;
+  setPendingCalls: (calls: PendingPortariaCall[]) => void;
   unit: UnitDirectoryItem;
+  unitLabels: Map<string, string>;
 }) {
   return (
     <Card>
-      <View style={styles.rowBetween}>
+      <View style={styles.unitRow}>
         <View style={styles.flex}>
           <Text style={styles.itemTitle}>{unit.label}</Text>
           <Text style={styles.itemMeta}>{unit.residents.join(', ')}</Text>
         </View>
-        <Text style={[styles.statusText, unit.canReceiveCalls ? styles.statusOk : styles.statusBlocked]}>
-          {unit.canReceiveCalls ? 'Disponivel' : 'Bloqueada'}
-        </Text>
-      </View>
-      <View style={styles.cardAction}>
-        <PrimaryButton
+        <PhoneActionButton
+          accessibilityLabel={`Chamar unidade ${unit.label}`}
           disabled={!unit.canReceiveCalls || activeCallTarget !== null}
-          label={activeCallTarget === unit.id ? 'Chamando...' : 'Chamar unidade'}
-          tone={unit.canReceiveCalls ? 'primary' : 'neutral'}
+          testID={unit.canReceiveCalls ? 'gatehouse-call-unit' : 'gatehouse-unit-unavailable'}
           onPress={() =>
             unit.canReceiveCalls
-              ? handleGatehouseToUnitCall(unit.id, unit.label, setFeedback, setActiveCallTarget)
+              ? handleGatehouseToUnitCall(
+                  unit.id,
+                  unit.label,
+                  unitLabels,
+                  setHistory,
+                  setPendingCalls,
+                  setFeedback,
+                  setActiveCallTarget,
+                )
               : Alert.alert('Unidade bloqueada', 'Esta unidade nao recebe chamadas no momento.')
           }
         />
       </View>
+      <Text style={[styles.itemHelp, unit.canReceiveCalls ? styles.statusOk : styles.statusBlocked]}>
+        {activeCallTarget === unit.id ? 'Chamando...' : unit.canReceiveCalls ? 'Disponivel' : 'Bloqueada'}
+      </Text>
     </Card>
-  );
-}
-
-function PendingCallsPanel({
-  calls,
-  onAnswer,
-  unitLabels,
-}: {
-  calls: PendingPortariaCall[];
-  onAnswer: (callId: string) => void;
-  unitLabels: Map<string, string>;
-}) {
-  return (
-    <View style={styles.section}>
-      <Text style={styles.sectionTitle}>Chamadas recebidas</Text>
-      <View style={styles.list}>
-        {calls.length === 0 ? (
-          <Card>
-            <Text style={styles.itemMeta}>Nenhuma chamada tocando para a portaria.</Text>
-          </Card>
-        ) : (
-          calls.map((call) => (
-            <Card key={call.call_id}>
-              <Text style={styles.itemTitle}>{unitLabels.get(call.origin_unit_id ?? call.unit_id) ?? 'Unidade'} para Portaria</Text>
-              <Text style={styles.itemMeta}>Tocando desde {formatDateTime(call.started_at)}</Text>
-              <View style={styles.cardAction}>
-                <PrimaryButton label="Atender" onPress={() => onAnswer(call.call_id)} />
-              </View>
-            </Card>
-          ))
-        )}
-      </View>
-    </View>
-  );
-}
-
-function ActiveCallsPanel({ calls, onEnd }: { calls: CallRecord[]; onEnd: (callId: string) => void }) {
-  if (calls.length === 0) {
-    return null;
-  }
-
-  return (
-    <View style={styles.section}>
-      <Text style={styles.sectionTitle}>Chamada em andamento</Text>
-      <View style={styles.list}>
-        {calls.map((call) => (
-          <Card key={call.id}>
-            <Text style={styles.itemTitle}>
-              {call.fromLabel} para {call.toLabel}
-            </Text>
-            <Text style={styles.itemMeta}>Atendida desde {call.startedAt}</Text>
-            <VoiceJoinPanel callId={call.id} />
-            <View style={styles.cardAction}>
-              <PrimaryButton label="Encerrar chamada" tone="danger" onPress={() => onEnd(call.id)} />
-            </View>
-          </Card>
-        ))}
-      </View>
-    </View>
   );
 }
 
@@ -254,6 +236,9 @@ async function refreshGatehouseData(
 async function handleGatehouseToUnitCall(
   unitId: string,
   unitLabel: string,
+  unitLabels: Map<string, string>,
+  setHistory: (history: CallRecord[]) => void,
+  setPendingCalls: (calls: PendingPortariaCall[]) => void,
   setFeedback: (message: string | null) => void,
   setActiveCallTarget: (target: string | null) => void,
 ) {
@@ -263,6 +248,7 @@ async function handleGatehouseToUnitCall(
   try {
     const call = await startGatehouseToUnitCall(unitId);
     setFeedback(`Chamada iniciada para ${unitLabel}. Status: ${call.status}.`);
+    await refreshGatehouseData(unitLabels, setHistory, setPendingCalls, setFeedback, { silent: true });
   } catch (err) {
     setFeedback(`Nao foi possivel chamar ${unitLabel}: ${err instanceof Error ? err.message : 'Tente novamente.'}`);
   } finally {
@@ -424,6 +410,14 @@ const styles = StyleSheet.create({
   stats: {
     flexDirection: 'row',
     gap: theme.spacing.md,
+    marginTop: theme.spacing.lg,
+  },
+  statChip: {
+    backgroundColor: '#eef6ff',
+    borderRadius: theme.radius.sm,
+    minWidth: 92,
+    paddingHorizontal: theme.spacing.md,
+    paddingVertical: theme.spacing.md,
   },
   statValue: {
     color: theme.colors.text,
@@ -452,6 +446,12 @@ const styles = StyleSheet.create({
     gap: theme.spacing.md,
     justifyContent: 'space-between',
   },
+  deviceHeader: {
+    alignItems: 'center',
+    flexDirection: 'row',
+    gap: theme.spacing.md,
+    justifyContent: 'space-between',
+  },
   flex: {
     flex: 1,
   },
@@ -465,6 +465,11 @@ const styles = StyleSheet.create({
     fontSize: 14,
     lineHeight: 20,
     marginTop: theme.spacing.xs,
+  },
+  itemHelp: {
+    fontSize: 13,
+    fontWeight: '800',
+    marginTop: theme.spacing.sm,
   },
   badge: {
     backgroundColor: '#dcfce7',
@@ -485,6 +490,12 @@ const styles = StyleSheet.create({
   },
   statusBlocked: {
     color: theme.colors.danger,
+  },
+  unitRow: {
+    alignItems: 'center',
+    flexDirection: 'row',
+    gap: theme.spacing.md,
+    justifyContent: 'space-between',
   },
   cardAction: {
     marginTop: theme.spacing.md,

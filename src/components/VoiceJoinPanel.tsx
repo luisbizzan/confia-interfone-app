@@ -1,4 +1,4 @@
-import { AudioSession, LiveKitRoom, useConnectionState, useRoomContext } from '@livekit/react-native';
+import { AndroidAudioTypePresets, AudioSession, LiveKitRoom, useConnectionState, useRoomContext } from '@livekit/react-native';
 import { ConnectionState } from 'livekit-client';
 import { useEffect, useState } from 'react';
 import { StyleSheet, Text, View } from 'react-native';
@@ -8,10 +8,11 @@ import { theme } from '../theme/theme';
 import { PrimaryButton } from './PrimaryButton';
 
 type VoiceJoinPanelProps = {
+  autoConnect?: boolean;
   callId: string;
 };
 
-export function VoiceJoinPanel({ callId }: VoiceJoinPanelProps) {
+export function VoiceJoinPanel({ autoConnect = false, callId }: VoiceJoinPanelProps) {
   const [isLoading, setIsLoading] = useState(false);
   const [joinInfo, setJoinInfo] = useState<LiveKitJoinInfo | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -30,6 +31,12 @@ export function VoiceJoinPanel({ callId }: VoiceJoinPanelProps) {
     }
   }
 
+  useEffect(() => {
+    if (autoConnect) {
+      handlePrepareAudio();
+    }
+  }, [autoConnect, callId]);
+
   return (
     <View style={styles.container}>
       {joinInfo ? (
@@ -38,11 +45,13 @@ export function VoiceJoinPanel({ callId }: VoiceJoinPanelProps) {
         <>
           <PrimaryButton
             disabled={isLoading}
-            label={isLoading ? 'Conectando audio...' : 'Entrar no audio'}
+            label={isLoading ? 'Conectando audio...' : 'Conectar audio'}
             testID="voice-prepare"
             onPress={handlePrepareAudio}
           />
-          <Text style={styles.hint}>Entre no audio depois que a chamada for atendida.</Text>
+          <Text style={styles.hint}>
+            {autoConnect ? 'Preparando o audio da ligacao.' : 'Entre no audio depois que a chamada for atendida.'}
+          </Text>
         </>
       )}
       {error ? <Text style={styles.error}>{error}</Text> : null}
@@ -52,9 +61,19 @@ export function VoiceJoinPanel({ callId }: VoiceJoinPanelProps) {
 
 function VoiceRoom({ joinInfo, onError }: { joinInfo: LiveKitJoinInfo; onError: (message: string | null) => void }) {
   useEffect(() => {
-    AudioSession.startAudioSession().catch(() => {
-      onError('Nao foi possivel iniciar a sessao de audio do dispositivo.');
-    });
+    AudioSession.configureAudio({
+      android: {
+        audioTypeOptions: AndroidAudioTypePresets.communication,
+        preferredOutputList: ['earpiece', 'headset', 'bluetooth', 'speaker'],
+      },
+      ios: {
+        defaultOutput: 'earpiece',
+      },
+    })
+      .then(() => AudioSession.startAudioSession())
+      .catch(() => {
+        onError('Nao foi possivel iniciar a sessao de audio do dispositivo.');
+      });
 
     return () => {
       AudioSession.stopAudioSession().catch(() => undefined);
