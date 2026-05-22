@@ -1,6 +1,6 @@
 import { StatusBar } from 'expo-status-bar';
 import { useEffect, useState } from 'react';
-import { ActivityIndicator, SafeAreaView, ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import { ActivityIndicator, Platform, SafeAreaView, ScrollView, StatusBar as NativeStatusBar, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 
 import { LoginScreen } from './src/screens/LoginScreen';
 import { ResidentHomeScreen } from './src/screens/ResidentHomeScreen';
@@ -107,7 +107,8 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     justifyContent: 'space-between',
     paddingHorizontal: theme.spacing.lg,
-    paddingVertical: theme.spacing.md,
+    paddingBottom: theme.spacing.md,
+    paddingTop: Platform.OS === 'android' ? (NativeStatusBar.currentHeight ?? 0) + theme.spacing.sm : theme.spacing.md,
   },
   brand: {
     color: theme.colors.text,
