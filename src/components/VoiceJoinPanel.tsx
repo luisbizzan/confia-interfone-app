@@ -1,7 +1,8 @@
+import { MaterialIcons } from '@expo/vector-icons';
 import { AndroidAudioTypePresets, AudioSession, LiveKitRoom, useConnectionState, useRoomContext } from '@livekit/react-native';
 import { ConnectionState } from 'livekit-client';
 import { useEffect, useState } from 'react';
-import { StyleSheet, Text, View } from 'react-native';
+import { StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 
 import { getLiveKitJoinInfo, type LiveKitJoinInfo } from '../services/livekit';
 import { theme } from '../theme/theme';
@@ -103,6 +104,8 @@ function VoiceRoomControls({ roomName, onError }: { roomName: string; onError: (
   const room = useRoomContext();
   const [microphoneEnabled, setMicrophoneEnabled] = useState(true);
   const [isChangingMicrophone, setIsChangingMicrophone] = useState(false);
+  const [speakerEnabled, setSpeakerEnabled] = useState(false);
+  const [isChangingOutput, setIsChangingOutput] = useState(false);
 
   async function handleToggleMicrophone() {
     setIsChangingMicrophone(true);
@@ -119,18 +122,68 @@ function VoiceRoomControls({ roomName, onError }: { roomName: string; onError: (
     }
   }
 
+  async function handleToggleSpeaker() {
+    setIsChangingOutput(true);
+
+    try {
+      const nextState = !speakerEnabled;
+      await AudioSession.selectAudioOutput(nextState ? 'speaker' : 'earpiece');
+      setSpeakerEnabled(nextState);
+      onError(null);
+    } catch (err) {
+      onError(err instanceof Error ? err.message : 'Nao foi possivel alterar a saida de audio.');
+    } finally {
+      setIsChangingOutput(false);
+    }
+  }
+
   return (
     <View style={styles.roomControls}>
-      <Text style={styles.success}>Audio {voiceConnectionLabel(connectionState)}</Text>
-      <Text style={styles.hint}>Sala segura: {roomName}</Text>
-      <PrimaryButton
-        disabled={isChangingMicrophone || connectionState !== ConnectionState.Connected}
-        label={microphoneEnabled ? 'Mutar microfone' : 'Ativar microfone'}
-        testID="voice-microphone-toggle"
-        tone="neutral"
-        onPress={handleToggleMicrophone}
-      />
+      <Text style={styles.connection}>Audio {voiceConnectionLabel(connectionState)}</Text>
+      <View style={styles.controlRow}>
+        <VoiceControlButton
+          disabled={isChangingMicrophone || connectionState !== ConnectionState.Connected}
+          icon={microphoneEnabled ? 'mic' : 'mic-off'}
+          label={microphoneEnabled ? 'Silenciar' : 'Microfone'}
+          testID="voice-microphone-toggle"
+          onPress={handleToggleMicrophone}
+        />
+        <VoiceControlButton
+          disabled={isChangingOutput || connectionState !== ConnectionState.Connected}
+          icon={speakerEnabled ? 'volume-up' : 'hearing'}
+          label={speakerEnabled ? 'Viva-voz' : 'Fone'}
+          testID="voice-output-toggle"
+          onPress={handleToggleSpeaker}
+        />
+      </View>
     </View>
+  );
+}
+
+function VoiceControlButton({
+  disabled,
+  icon,
+  label,
+  onPress,
+  testID,
+}: {
+  disabled: boolean;
+  icon: 'hearing' | 'mic' | 'mic-off' | 'volume-up';
+  label: string;
+  onPress: () => void;
+  testID: string;
+}) {
+  return (
+    <TouchableOpacity
+      accessibilityRole="button"
+      disabled={disabled}
+      style={[styles.voiceControl, disabled && styles.voiceControlDisabled]}
+      testID={testID}
+      onPress={onPress}
+    >
+      <MaterialIcons color="#ffffff" name={icon} size={26} />
+      <Text style={styles.voiceControlLabel}>{label}</Text>
+    </TouchableOpacity>
   );
 }
 
@@ -159,16 +212,37 @@ const styles = StyleSheet.create({
     color: theme.colors.muted,
   },
   room: {
-    borderColor: theme.colors.border,
-    borderRadius: theme.radius.sm,
-    borderWidth: 1,
-    padding: theme.spacing.md,
+    gap: theme.spacing.sm,
   },
   roomControls: {
     gap: theme.spacing.sm,
   },
-  success: {
-    color: theme.colors.success,
+  connection: {
+    color: '#ffffff',
+    fontSize: 14,
     fontWeight: '700',
+    textAlign: 'center',
+  },
+  controlRow: {
+    flexDirection: 'row',
+    gap: theme.spacing.md,
+    justifyContent: 'center',
+  },
+  voiceControl: {
+    alignItems: 'center',
+    backgroundColor: 'rgba(255,255,255,0.14)',
+    borderRadius: theme.radius.md,
+    flex: 1,
+    gap: theme.spacing.xs,
+    minHeight: 72,
+    justifyContent: 'center',
+  },
+  voiceControlDisabled: {
+    opacity: 0.45,
+  },
+  voiceControlLabel: {
+    color: '#ffffff',
+    fontSize: 13,
+    fontWeight: '800',
   },
 });

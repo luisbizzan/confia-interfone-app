@@ -1,9 +1,9 @@
 import type { ReactNode } from 'react';
+import { MaterialIcons } from '@expo/vector-icons';
 import { StyleSheet, Text, View } from 'react-native';
 
 import { theme } from '../theme/theme';
 import type { CallRecord } from '../types/domain';
-import { Card } from './Card';
 import { PrimaryButton } from './PrimaryButton';
 import { VoiceJoinPanel } from './VoiceJoinPanel';
 
@@ -73,9 +73,7 @@ export function ActiveCallExperience({ call, onEnd }: ActiveCallExperienceProps)
       pulseLabel="Audio seguro"
     >
       <VoiceJoinPanel autoConnect callId={call.id} />
-      <View style={styles.endAction}>
-        <PrimaryButton label="Encerrar chamada" tone="danger" onPress={onEnd} />
-      </View>
+      <PrimaryButton label="Encerrar chamada" tone="danger" onPress={onEnd} />
     </CallStage>
   );
 }
@@ -95,68 +93,64 @@ function CallStage({
 }) {
   return (
     <View style={styles.screen}>
-      <Card>
-        <View style={styles.hero}>
-          <Text style={styles.eyebrow}>{eyebrow}</Text>
-          <View style={styles.avatar}>
-            <Text style={styles.avatarMark}>C</Text>
-          </View>
-          <Text style={styles.headline}>{headline}</Text>
-          <Text style={styles.meta}>{meta}</Text>
-          <View style={styles.pulse}>
-            <View style={styles.pulseDot} />
-            <Text style={styles.pulseText}>{pulseLabel}</Text>
-          </View>
+      <View style={styles.hero}>
+        <Text style={styles.eyebrow}>{eyebrow}</Text>
+        <View style={styles.avatar}>
+          <MaterialIcons color="#ffffff" name="phone-in-talk" size={48} />
         </View>
-        {children}
-      </Card>
+        <Text style={styles.headline}>{headline}</Text>
+        <Text style={styles.meta}>{meta}</Text>
+        <View style={styles.pulse}>
+          <View style={styles.pulseDot} />
+          <Text style={styles.pulseText}>{pulseLabel}</Text>
+        </View>
+      </View>
+      <View style={styles.controls}>{children}</View>
     </View>
   );
 }
 
 const styles = StyleSheet.create({
   screen: {
+    backgroundColor: '#063b3c',
+    borderRadius: theme.radius.lg,
     flex: 1,
-    justifyContent: 'center',
-    minHeight: 520,
+    justifyContent: 'space-between',
+    minHeight: 620,
+    overflow: 'hidden',
+    padding: theme.spacing.lg,
   },
   hero: {
     alignItems: 'center',
     gap: theme.spacing.sm,
-    paddingBottom: theme.spacing.xl,
-    paddingTop: theme.spacing.lg,
+    paddingTop: theme.spacing.xxl,
   },
   eyebrow: {
-    color: theme.colors.primary,
+    color: '#baf5ec',
     fontSize: 13,
     fontWeight: '900',
     textTransform: 'uppercase',
   },
   avatar: {
     alignItems: 'center',
-    backgroundColor: '#d8f4ef',
-    borderColor: '#b7e6df',
+    backgroundColor: '#12857b',
+    borderColor: '#4ecdc0',
     borderRadius: 999,
     borderWidth: 1,
-    height: 112,
+    height: 128,
     justifyContent: 'center',
     marginTop: theme.spacing.lg,
-    width: 112,
-  },
-  avatarMark: {
-    color: theme.colors.primaryDark,
-    fontSize: 46,
-    fontWeight: '900',
+    width: 128,
   },
   headline: {
-    color: theme.colors.text,
-    fontSize: 30,
+    color: '#ffffff',
+    fontSize: 34,
     fontWeight: '900',
     marginTop: theme.spacing.lg,
     textAlign: 'center',
   },
   meta: {
-    color: theme.colors.muted,
+    color: '#d9f4f1',
     fontSize: 15,
     lineHeight: 22,
     maxWidth: 360,
@@ -164,7 +158,7 @@ const styles = StyleSheet.create({
   },
   pulse: {
     alignItems: 'center',
-    backgroundColor: '#ecfeff',
+    backgroundColor: 'rgba(255,255,255,0.12)',
     borderRadius: 999,
     flexDirection: 'row',
     gap: theme.spacing.sm,
@@ -179,14 +173,19 @@ const styles = StyleSheet.create({
     width: 9,
   },
   pulseText: {
-    color: theme.colors.primaryDark,
+    color: '#ffffff',
     fontSize: 13,
     fontWeight: '800',
   },
   actionStack: {
     gap: theme.spacing.md,
   },
-  endAction: {
-    marginTop: theme.spacing.md,
+  controls: {
+    backgroundColor: 'rgba(255,255,255,0.1)',
+    borderColor: 'rgba(255,255,255,0.16)',
+    borderRadius: theme.radius.lg,
+    borderWidth: 1,
+    gap: theme.spacing.md,
+    padding: theme.spacing.md,
   },
 });

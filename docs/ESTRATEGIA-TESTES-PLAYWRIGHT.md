@@ -156,6 +156,11 @@ Atualizacao de UX aplicada depois do primeiro feedback nativo:
 - Listas de unidades ficam compactas e a acao de ligar passa a usar botao circular com icone de telefone.
 - A chamada iniciada para unidade deve abrir a tela de espera logo depois da criacao, sem depender do proximo polling.
 - O teste nativo deve confirmar a configuracao de rota de audio priorizando earpiece antes do alto-falante.
+- Revisao visual no aparelho exige validar que:
+  - a acao de chamada usa icone vetorial, sem emoji do sistema;
+  - a propria unidade nao aparece como destino de ligacao do morador;
+  - a tela de ligacao nao expoe o nome tecnico da sala LiveKit;
+  - o alternador de saida troca entre fone e viva-voz com a sala conectada.
 
 ## Estrutura sugerida
 
@@ -377,6 +382,7 @@ resident-call-unit
 resident-voice-prepare
 resident-voice-ready
 resident-voice-microphone-toggle
+resident-voice-output-toggle
 resident-unit-unavailable
 gatehouse-call-unit
 gatehouse-unit-unavailable
@@ -385,6 +391,7 @@ gatehouse-active-call-end
 gatehouse-voice-prepare
 gatehouse-voice-ready
 gatehouse-voice-microphone-toggle
+gatehouse-voice-output-toggle
 call-history-list
 ```
 

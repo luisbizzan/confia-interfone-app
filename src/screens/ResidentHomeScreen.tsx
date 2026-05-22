@@ -30,6 +30,7 @@ export function ResidentHomeScreen({ context, directoryUnits, user }: ResidentHo
   const myUnits = context.unit_members.map((member) => formatUnitLabel(member.unit));
   const originUnit = context.unit_members.find((member) => member.active_for_calls && member.can_make_calls);
   const units = directoryUnits.length > 0 ? directoryUnits : myUnits.length > 0 ? buildUnitsFromContext(context) : demoUnits;
+  const callableUnits = units.filter((unit) => unit.id !== originUnit?.unit_id);
   const unitLabels = useMemo(() => buildUnitLabelMap([...directoryUnits, ...buildUnitsFromContext(context)]), [context, directoryUnits]);
   const [history, setHistory] = useState<CallRecord[]>([]);
   const [pendingCalls, setPendingCalls] = useState<PendingUnitCall[]>([]);
@@ -86,9 +87,9 @@ export function ResidentHomeScreen({ context, directoryUnits, user }: ResidentHo
     <View style={styles.screen}>
       <View>
         <Text style={styles.eyebrow}>Modo morador</Text>
-        <Text style={styles.title}>Ola, {user.name}</Text>
+        <Text style={styles.title}>Interfone</Text>
         <Text style={styles.description}>
-          {myUnits.length > 0 ? `Unidade vinculada: ${myUnits.join(', ')}` : 'Ligue para a portaria ou para outra unidade do mesmo condominio.'}
+          {myUnits.length > 0 ? `Sua unidade: ${myUnits.join(', ')}` : 'Ligue para a portaria ou para outra unidade do mesmo condominio.'}
         </Text>
       </View>
 
@@ -118,7 +119,12 @@ export function ResidentHomeScreen({ context, directoryUnits, user }: ResidentHo
       <View style={styles.section}>
         <Text style={styles.sectionTitle}>Unidades do condominio</Text>
         <View style={styles.list}>
-          {units.map((unit) => (
+          {callableUnits.length === 0 ? (
+            <Card>
+              <Text style={styles.itemMeta}>Cadastre outra unidade com morador ativo para ligar entre casas.</Text>
+            </Card>
+          ) : null}
+          {callableUnits.map((unit) => (
             <UnitCard
               activeCallTarget={activeCallTarget}
               key={unit.id}
@@ -190,13 +196,8 @@ function UnitCard({
   unit: UnitDirectoryItem;
   unitLabels: Map<string, string>;
 }) {
-  const isOwnUnit = originUnitId === unit.id;
-  const canCallUnit = Boolean(unit.canReceiveCalls && originUnitId && !isOwnUnit);
-  const helper = isOwnUnit
-    ? 'Esta e a sua propria unidade. Crie uma segunda unidade com morador para testar chamada entre casas.'
-    : unit.canReceiveCalls
-      ? 'Toque para iniciar uma chamada real para esta unidade.'
-      : 'Esta unidade nao recebe chamadas no momento.';
+  const canCallUnit = Boolean(unit.canReceiveCalls && originUnitId);
+  const helper = unit.canReceiveCalls ? 'Disponivel' : 'Indisponivel';
 
   return (
     <Card>
@@ -204,11 +205,11 @@ function UnitCard({
         <View style={styles.flex}>
           <Text style={styles.itemTitle}>{unit.label}</Text>
           <Text style={styles.itemMeta}>
-            {unit.type} - {isOwnUnit ? 'Sua unidade' : unit.residents.join(', ')}
+            {unit.type} - {unit.residents.join(', ')}
           </Text>
         </View>
         <PhoneActionButton
-          accessibilityLabel={isOwnUnit ? `Sua unidade ${unit.label}` : `Chamar unidade ${unit.label}`}
+          accessibilityLabel={`Chamar unidade ${unit.label}`}
           disabled={!canCallUnit || activeCallTarget !== null}
           testID={canCallUnit ? 'resident-call-unit' : 'resident-unit-unavailable'}
           onPress={() => {
@@ -230,7 +231,9 @@ function UnitCard({
           }}
         />
       </View>
-      <Text style={styles.itemHelp}>{activeCallTarget === unit.id ? 'Chamando...' : helper}</Text>
+      <Text style={[styles.itemHelp, unit.canReceiveCalls ? styles.available : styles.unavailable]}>
+        {activeCallTarget === unit.id ? 'Chamando...' : helper}
+      </Text>
     </Card>
   );
 }
@@ -554,6 +557,12 @@ const styles = StyleSheet.create({
     fontSize: 14,
     fontWeight: '700',
     marginTop: theme.spacing.md,
+  },
+  available: {
+    color: theme.colors.success,
+  },
+  unavailable: {
+    color: theme.colors.muted,
   },
   badge: {
     borderRadius: 999,

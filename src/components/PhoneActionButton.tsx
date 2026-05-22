@@ -1,4 +1,5 @@
-import { StyleSheet, Text, TouchableOpacity } from 'react-native';
+import { MaterialIcons } from '@expo/vector-icons';
+import { StyleSheet, TouchableOpacity } from 'react-native';
 
 import { theme } from '../theme/theme';
 
@@ -24,7 +25,7 @@ export function PhoneActionButton({
       testID={testID}
       onPress={onPress}
     >
-      <Text style={[styles.icon, disabled && styles.disabledIcon]}>☎</Text>
+      <MaterialIcons color={disabled ? theme.colors.muted : '#ffffff'} name="call" size={26} />
     </TouchableOpacity>
   );
 }
@@ -40,13 +41,5 @@ const styles = StyleSheet.create({
   },
   disabled: {
     backgroundColor: '#e5e7eb',
-  },
-  icon: {
-    color: '#ffffff',
-    fontSize: 23,
-    fontWeight: '900',
-  },
-  disabledIcon: {
-    color: theme.colors.muted,
   },
 });

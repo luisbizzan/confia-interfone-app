@@ -388,6 +388,12 @@ Entregas iniciadas:
   - listas de unidades de morador e portaria ficaram mais compactas e usam acao circular de telefone;
   - chamadas para unidade atualizam o estado imediatamente depois da criacao para abrir a tela de espera sem aguardar o proximo polling;
   - sessao de audio LiveKit passa a priorizar earpiece/fone no Android e saida de earpiece no iOS.
+- Refinamento visual depois da revisao no aparelho:
+  - acao de ligar deixou de usar glifo/emoji do Android e passou a usar icone vetorial do Expo;
+  - a propria unidade do morador saiu da lista de destinos para deixar a tela mais limpa;
+  - tela de chamada passou a usar superficie imersiva escura e ocultar o nome tecnico da sala LiveKit;
+  - controles da chamada passaram a ficar concentrados na area inferior;
+  - controle de saida de audio permite alternar entre fone e viva-voz quando a conexao LiveKit estiver pronta.
 
 Regras de seguranca:
 
@@ -412,7 +418,7 @@ Escopo previsto restante:
   - validar no aparelho a conexao automatica do audio depois do atendimento;
   - validar no aparelho a tela dedicada para tocando, recebendo e em chamada;
   - feedback sonoro de chamada recebida;
-  - evoluir a tela de chamada com controles de alto-falante e melhor feedback de reconexao.
+  - evoluir feedback de reconexao/erro sem expor detalhes tecnicos.
 - Validar roteamento de audio nativo com prioridade para o fone do aparelho no uso comum.
 - Evoluir UX de reconexao/erro depois do primeiro teste nativo.
 
