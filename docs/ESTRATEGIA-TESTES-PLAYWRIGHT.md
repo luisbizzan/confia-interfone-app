@@ -162,6 +162,7 @@ Atualizacao de UX aplicada depois do primeiro feedback nativo:
   - a tela de ligacao nao expoe o nome tecnico da sala LiveKit;
   - o alternador de saida troca entre fone e viva-voz com a sala conectada.
   - cabecalho Android respeita a barra de status do aparelho.
+  - a tela de espera da chamada nao oferece acao manual `Atualizar estado` para o usuario final.
 
 ## Estrutura sugerida
 

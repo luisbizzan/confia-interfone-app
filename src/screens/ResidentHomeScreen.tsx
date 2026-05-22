@@ -78,7 +78,6 @@ export function ResidentHomeScreen({ context, directoryUnits, user }: ResidentHo
       <OutgoingCallExperience
         call={outgoingCall}
         onCancel={() => handleCancelCall(outgoingCall.id, unitLabels, setHistory, setPendingCalls, setFeedback)}
-        onRefresh={() => refreshResidentData(unitLabels, setHistory, setPendingCalls, setFeedback)}
       />
     );
   }

@@ -69,7 +69,6 @@ export function GatehouseHomeScreen({ context, directoryUnits, user }: Gatehouse
       <OutgoingCallExperience
         call={outgoingCall}
         onCancel={() => handleCancelCall(outgoingCall.id, unitLabels, setHistory, setPendingCalls, setFeedback)}
-        onRefresh={() => refreshGatehouseData(unitLabels, setHistory, setPendingCalls, setFeedback)}
       />
     );
   }

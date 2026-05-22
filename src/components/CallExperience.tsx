@@ -18,7 +18,6 @@ type IncomingCallExperienceProps = {
 type OutgoingCallExperienceProps = {
   call: CallRecord;
   onCancel: () => void;
-  onRefresh: () => void;
 };
 
 type ActiveCallExperienceProps = {
@@ -48,7 +47,7 @@ export function IncomingCallExperience({
   );
 }
 
-export function OutgoingCallExperience({ call, onCancel, onRefresh }: OutgoingCallExperienceProps) {
+export function OutgoingCallExperience({ call, onCancel }: OutgoingCallExperienceProps) {
   return (
     <CallStage
       eyebrow="Chamando"
@@ -58,7 +57,6 @@ export function OutgoingCallExperience({ call, onCancel, onRefresh }: OutgoingCa
     >
       <View style={styles.actionStack}>
         <PrimaryButton label="Cancelar chamada" tone="danger" onPress={onCancel} />
-        <PrimaryButton label="Atualizar estado" tone="neutral" onPress={onRefresh} />
       </View>
     </CallStage>
   );

@@ -395,6 +395,7 @@ Entregas iniciadas:
   - controles da chamada passaram a ficar concentrados na area inferior;
   - controle de saida de audio permite alternar entre fone e viva-voz quando a conexao LiveKit estiver pronta.
   - cabecalho no Android ganhou respiro da barra de status para nao sobrepor os indicadores do aparelho.
+  - tela de chamada originada deixou de expor o botao tecnico `Atualizar estado`, mantendo apenas espera automatica e cancelamento.
 
 Regras de seguranca:
 
