@@ -245,6 +245,13 @@ Atualizacao apos regra de ocupacao no backend:
   - commit `73ff0d7 Document busy call target rule`;
   - artefato `https://expo.dev/artifacts/eas/tQ5krp8VidvgyVhsA8TB62.apk`;
   - instalado no aparelho conectado e abertura inicial confirmada por logcat.
+- Diagnostico para reproducao de falhas reais:
+  - a tabela `app_call_diagnostics` deve ser consultada apos testes com varios aparelhos;
+  - cada clique de chamada deve gerar evento `STARTED`;
+  - cada retorno da RPC deve gerar `SUCCESS` ou `ERROR`;
+  - validar que erros de portaria/unidade ocupada aparecem em popup com botao `OK`;
+  - validar que a mensagem de erro fica associada a acao executada e nao aparece em card errado;
+  - no roteiro manual, anotar horario aproximado e aparelho usado para cruzar com `created_at`, `user_email`, `action` e `error_message`.
 
 Estrategia de push notifications:
 

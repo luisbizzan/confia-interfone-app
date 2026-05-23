@@ -7,6 +7,7 @@ import { PhoneActionButton } from '../components/PhoneActionButton';
 import { PrimaryButton } from '../components/PrimaryButton';
 import { demoUnits } from '../data/demo-data';
 import { answerGatehouseCall, cancelCall, endCall, getMyCallHistory, getMyPendingCalls, startGatehouseToUnitCall } from '../services/calls';
+import { getErrorMessage, logCallDiagnostic } from '../services/diagnostics';
 import { theme } from '../theme/theme';
 import type { AuthenticatedUser, BackendCallRecord, CallRecord, PendingPortariaCall, UnitDirectoryItem, UserContext } from '../types/domain';
 
@@ -47,7 +48,7 @@ export function GatehouseHomeScreen({ context, directoryUnits, user }: Gatehouse
     return (
       <IncomingCallExperience
         callerLabel={`${unitLabels.get(incomingCall.origin_unit_id ?? incomingCall.unit_id) ?? 'Unidade'} para Portaria`}
-        onAnswer={() => handleAnswerGatehouseCall(incomingCall.call_id, unitLabels, setHistory, setPendingCalls, setFeedback)}
+        onAnswer={() => handleAnswerGatehouseCall(incomingCall.call_id, user, unitLabels, setHistory, setPendingCalls, setFeedback)}
         onRefresh={() => refreshGatehouseData(unitLabels, setHistory, setPendingCalls, setFeedback)}
         startedAt={formatDateTime(incomingCall.started_at)}
         targetLabel="Portaria"
@@ -59,7 +60,7 @@ export function GatehouseHomeScreen({ context, directoryUnits, user }: Gatehouse
     return (
       <ActiveCallExperience
         call={activeCall}
-        onEnd={() => handleEndCall(activeCall.id, unitLabels, setHistory, setPendingCalls, setFeedback)}
+        onEnd={() => handleEndCall(activeCall.id, user, unitLabels, setHistory, setPendingCalls, setFeedback)}
       />
     );
   }
@@ -68,7 +69,7 @@ export function GatehouseHomeScreen({ context, directoryUnits, user }: Gatehouse
     return (
       <OutgoingCallExperience
         call={outgoingCall}
-        onCancel={() => handleCancelCall(outgoingCall.id, unitLabels, setHistory, setPendingCalls, setFeedback)}
+        onCancel={() => handleCancelCall(outgoingCall.id, user, unitLabels, setHistory, setPendingCalls, setFeedback)}
       />
     );
   }
@@ -118,6 +119,7 @@ export function GatehouseHomeScreen({ context, directoryUnits, user }: Gatehouse
               setPendingCalls={setPendingCalls}
               unit={unit}
               unitLabels={unitLabels}
+              user={user}
             />
           ))}
         </View>
@@ -133,7 +135,7 @@ export function GatehouseHomeScreen({ context, directoryUnits, user }: Gatehouse
         {showHistory ? (
           <CallHistory
             calls={history}
-            onCancel={(callId) => handleCancelCall(callId, unitLabels, setHistory, setPendingCalls, setFeedback)}
+            onCancel={(callId) => handleCancelCall(callId, user, unitLabels, setHistory, setPendingCalls, setFeedback)}
           />
         ) : null}
       </View>
@@ -149,6 +151,7 @@ function GatehouseUnitCard({
   setPendingCalls,
   unit,
   unitLabels,
+  user,
 }: {
   activeCallTarget: string | null;
   setActiveCallTarget: (target: string | null) => void;
@@ -157,6 +160,7 @@ function GatehouseUnitCard({
   setPendingCalls: (calls: PendingPortariaCall[]) => void;
   unit: UnitDirectoryItem;
   unitLabels: Map<string, string>;
+  user: AuthenticatedUser;
 }) {
   return (
     <Card>
@@ -174,13 +178,14 @@ function GatehouseUnitCard({
               ? handleGatehouseToUnitCall(
                   unit.id,
                   unit.label,
+                  user,
                   unitLabels,
                   setHistory,
                   setPendingCalls,
                   setFeedback,
                   setActiveCallTarget,
                 )
-              : Alert.alert('Unidade bloqueada', 'Esta unidade nao recebe chamadas no momento.')
+              : showInfo('Unidade bloqueada', 'Esta unidade nao recebe chamadas no momento.')
           }
         />
       </View>
@@ -235,21 +240,44 @@ async function refreshGatehouseData(
 async function handleGatehouseToUnitCall(
   unitId: string,
   unitLabel: string,
+  user: AuthenticatedUser,
   unitLabels: Map<string, string>,
   setHistory: (history: CallRecord[]) => void,
   setPendingCalls: (calls: PendingPortariaCall[]) => void,
   setFeedback: (message: string | null) => void,
   setActiveCallTarget: (target: string | null) => void,
 ) {
+  const startedAt = Date.now();
   setFeedback(`Chamando ${unitLabel}...`);
   setActiveCallTarget(unitId);
+  void logCallDiagnostic({ action: 'gatehouse_call_unit', result: 'STARTED', targetUnitId: unitId, user });
 
   try {
     const call = await startGatehouseToUnitCall(unitId);
+    void logCallDiagnostic({
+      action: 'gatehouse_call_unit',
+      callId: call.id,
+      durationMs: Date.now() - startedAt,
+      metadata: { backend_status: call.status, target_label: unitLabel },
+      result: 'SUCCESS',
+      targetUnitId: unitId,
+      user,
+    });
     setFeedback(`Chamada iniciada para ${unitLabel}. Status: ${call.status}.`);
     await refreshGatehouseData(unitLabels, setHistory, setPendingCalls, setFeedback, { silent: true });
   } catch (err) {
-    setFeedback(`Nao foi possivel chamar ${unitLabel}: ${err instanceof Error ? err.message : 'Tente novamente.'}`);
+    const message = getErrorMessage(err);
+    void logCallDiagnostic({
+      action: 'gatehouse_call_unit',
+      durationMs: Date.now() - startedAt,
+      errorMessage: message,
+      metadata: { target_label: unitLabel },
+      result: 'ERROR',
+      targetUnitId: unitId,
+      user,
+    });
+    setFeedback(null);
+    showInfo(`Nao foi possivel chamar ${unitLabel}`, message);
   } finally {
     setActiveCallTarget(null);
   }
@@ -257,56 +285,107 @@ async function handleGatehouseToUnitCall(
 
 async function handleAnswerGatehouseCall(
   callId: string,
+  user: AuthenticatedUser,
   unitLabels: Map<string, string>,
   setHistory: (history: CallRecord[]) => void,
   setPendingCalls: (calls: PendingPortariaCall[]) => void,
   setFeedback: (message: string | null) => void,
 ) {
+  const startedAt = Date.now();
   setFeedback('Atendendo chamada...');
+  void logCallDiagnostic({ action: 'gatehouse_answer_call', callId, result: 'STARTED', user });
 
   try {
     const call = await answerGatehouseCall(callId);
+    void logCallDiagnostic({
+      action: 'gatehouse_answer_call',
+      callId,
+      durationMs: Date.now() - startedAt,
+      metadata: { backend_status: call.status },
+      result: 'SUCCESS',
+      user,
+    });
     setFeedback(`Chamada atendida. Status: ${call.status}.`);
     await refreshGatehouseData(unitLabels, setHistory, setPendingCalls, setFeedback);
   } catch (err) {
-    setFeedback(`Nao foi possivel atender: ${err instanceof Error ? err.message : 'Tente novamente.'}`);
+    const message = getErrorMessage(err);
+    void logCallDiagnostic({ action: 'gatehouse_answer_call', callId, durationMs: Date.now() - startedAt, errorMessage: message, result: 'ERROR', user });
+    setFeedback(null);
+    showInfo('Nao foi possivel atender', message);
   }
 }
 
 async function handleCancelCall(
   callId: string,
+  user: AuthenticatedUser,
   unitLabels: Map<string, string>,
   setHistory: (history: CallRecord[]) => void,
   setPendingCalls: (calls: PendingPortariaCall[]) => void,
   setFeedback: (message: string | null) => void,
 ) {
+  const startedAt = Date.now();
   setFeedback('Cancelando chamada...');
+  void logCallDiagnostic({ action: 'gatehouse_cancel_call', callId, result: 'STARTED', user });
 
   try {
     const call = await cancelCall(callId);
+    void logCallDiagnostic({
+      action: 'gatehouse_cancel_call',
+      callId,
+      durationMs: Date.now() - startedAt,
+      metadata: { backend_status: call.status },
+      result: 'SUCCESS',
+      user,
+    });
     setFeedback(`Chamada cancelada. Status: ${call.status}.`);
     await refreshGatehouseData(unitLabels, setHistory, setPendingCalls, setFeedback);
   } catch (err) {
-    setFeedback(`Nao foi possivel cancelar: ${err instanceof Error ? err.message : 'Tente novamente.'}`);
+    const message = getErrorMessage(err);
+    void logCallDiagnostic({ action: 'gatehouse_cancel_call', callId, durationMs: Date.now() - startedAt, errorMessage: message, result: 'ERROR', user });
+    setFeedback(null);
+    showInfo('Nao foi possivel cancelar', message);
   }
 }
 
 async function handleEndCall(
   callId: string,
+  user: AuthenticatedUser,
   unitLabels: Map<string, string>,
   setHistory: (history: CallRecord[]) => void,
   setPendingCalls: (calls: PendingPortariaCall[]) => void,
   setFeedback: (message: string | null) => void,
 ) {
+  const startedAt = Date.now();
   setFeedback('Encerrando chamada...');
+  void logCallDiagnostic({ action: 'gatehouse_end_call', callId, result: 'STARTED', user });
 
   try {
     const call = await endCall(callId);
+    void logCallDiagnostic({
+      action: 'gatehouse_end_call',
+      callId,
+      durationMs: Date.now() - startedAt,
+      metadata: { backend_status: call.status },
+      result: 'SUCCESS',
+      user,
+    });
     setFeedback(`Chamada encerrada. Status: ${call.status}.`);
     await refreshGatehouseData(unitLabels, setHistory, setPendingCalls, setFeedback);
   } catch (err) {
-    setFeedback(`Nao foi possivel encerrar: ${err instanceof Error ? err.message : 'Tente novamente.'}`);
+    const message = getErrorMessage(err);
+    void logCallDiagnostic({ action: 'gatehouse_end_call', callId, durationMs: Date.now() - startedAt, errorMessage: message, result: 'ERROR', user });
+    setFeedback(null);
+    showInfo('Nao foi possivel encerrar', message);
   }
+}
+
+function showInfo(title: string, message: string) {
+  if (typeof globalThis.alert === 'function') {
+    globalThis.alert(`${title}\n\n${message}`);
+    return;
+  }
+
+  Alert.alert(title, message, [{ text: 'OK' }]);
 }
 
 async function refreshHistory(

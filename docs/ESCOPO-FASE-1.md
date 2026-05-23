@@ -484,6 +484,12 @@ Entregas iniciadas:
   - artefato `https://expo.dev/artifacts/eas/tQ5krp8VidvgyVhsA8TB62.apk`;
   - instalado via ADB no dispositivo conectado `SM-N981B`;
   - abertura inicial validada por logcat sem crash fatal.
+- Diagnostico operacional para testes com multiplos celulares:
+  - criada tabela backend `app_call_diagnostics`;
+  - app passa a registrar eventos de chamada com `STARTED`, `SUCCESS` e `ERROR`;
+  - eventos incluem usuario, perfil, condominio, plataforma, acao, `call_id`, unidades envolvidas, duracao da RPC e mensagem de erro;
+  - falhas de chamada passam a aparecer em popup com botao `OK`, deixando bloqueios de portaria/unidade ocupada mais visiveis;
+  - feedback inline de erro deixa de poluir cards incorretos, como a mensagem de chamada para unidade aparecendo dentro do card da portaria.
 
 Regras de seguranca:
 

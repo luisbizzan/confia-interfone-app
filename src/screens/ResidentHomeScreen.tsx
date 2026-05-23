@@ -15,6 +15,7 @@ import {
   startResidentToGatehouseCall,
   startResidentToUnitCall,
 } from '../services/calls';
+import { getErrorMessage, logCallDiagnostic } from '../services/diagnostics';
 import { theme } from '../theme/theme';
 import type { AuthenticatedUser, BackendCallRecord, CallRecord, PendingUnitCall, UnitDirectoryItem, UserContext } from '../types/domain';
 
@@ -56,7 +57,7 @@ export function ResidentHomeScreen({ context, directoryUnits, user }: ResidentHo
     return (
       <IncomingCallExperience
         callerLabel={pendingCallTitle(incomingCall, unitLabels)}
-        onAnswer={() => handleAnswerResidentCall(incomingCall.call_id, user.id, unitLabels, setHistory, setPendingCalls, setFeedback)}
+        onAnswer={() => handleAnswerResidentCall(incomingCall.call_id, user, unitLabels, setHistory, setPendingCalls, setFeedback)}
         onRefresh={() => refreshResidentData(unitLabels, setHistory, setPendingCalls, setFeedback)}
         startedAt={formatDateTime(incomingCall.started_at)}
         targetLabel="Sua unidade"
@@ -68,7 +69,7 @@ export function ResidentHomeScreen({ context, directoryUnits, user }: ResidentHo
     return (
       <ActiveCallExperience
         call={activeCall}
-        onEnd={() => handleEndCall(activeCall.id, unitLabels, setHistory, setPendingCalls, setFeedback)}
+        onEnd={() => handleEndCall(activeCall.id, user, unitLabels, setHistory, setPendingCalls, setFeedback)}
       />
     );
   }
@@ -77,7 +78,7 @@ export function ResidentHomeScreen({ context, directoryUnits, user }: ResidentHo
     return (
       <OutgoingCallExperience
         call={outgoingCall}
-        onCancel={() => handleCancelCall(outgoingCall.id, unitLabels, setHistory, setPendingCalls, setFeedback)}
+        onCancel={() => handleCancelCall(outgoingCall.id, user, unitLabels, setHistory, setPendingCalls, setFeedback)}
       />
     );
   }
@@ -104,11 +105,11 @@ export function ResidentHomeScreen({ context, directoryUnits, user }: ResidentHo
             testID="resident-call-gatehouse"
             onPress={() => {
               if (!originUnit?.unit_id) {
-                setFeedback('Nenhuma unidade liberada para iniciar chamadas.');
+                showInfo('Chamada indisponivel', 'Nenhuma unidade liberada para iniciar chamadas.');
                 return;
               }
 
-              handleResidentToGatehouseCall(originUnit.unit_id, unitLabels, setHistory, setPendingCalls, setFeedback, setActiveCallTarget);
+              handleResidentToGatehouseCall(user, originUnit.unit_id, unitLabels, setHistory, setPendingCalls, setFeedback, setActiveCallTarget);
             }}
           />
         </View>
@@ -134,6 +135,7 @@ export function ResidentHomeScreen({ context, directoryUnits, user }: ResidentHo
               setPendingCalls={setPendingCalls}
               unit={unit}
               unitLabels={unitLabels}
+              user={user}
             />
           ))}
         </View>
@@ -148,7 +150,7 @@ export function ResidentHomeScreen({ context, directoryUnits, user }: ResidentHo
         {showHistory ? (
           <CallHistory
             calls={history}
-            onCancel={(callId) => handleCancelCall(callId, unitLabels, setHistory, setPendingCalls, setFeedback)}
+            onCancel={(callId) => handleCancelCall(callId, user, unitLabels, setHistory, setPendingCalls, setFeedback)}
           />
         ) : null}
       </View>
@@ -185,6 +187,7 @@ function UnitCard({
   setPendingCalls,
   unit,
   unitLabels,
+  user,
 }: {
   activeCallTarget: string | null;
   originUnitId: string | null;
@@ -194,6 +197,7 @@ function UnitCard({
   setPendingCalls: (calls: PendingUnitCall[]) => void;
   unit: UnitDirectoryItem;
   unitLabels: Map<string, string>;
+  user: AuthenticatedUser;
 }) {
   const canCallUnit = Boolean(unit.canReceiveCalls && originUnitId);
   const helper = unit.canReceiveCalls ? 'Disponivel' : 'Indisponivel';
@@ -213,7 +217,7 @@ function UnitCard({
           testID={canCallUnit ? 'resident-call-unit' : 'resident-unit-unavailable'}
           onPress={() => {
             if (!originUnitId || !canCallUnit) {
-              setFeedback(helper);
+              showInfo('Chamada indisponivel', helper);
               return;
             }
 
@@ -221,6 +225,7 @@ function UnitCard({
               originUnitId,
               unit.id,
               unit.label,
+              user,
               unitLabels,
               setHistory,
               setPendingCalls,
@@ -351,16 +356,17 @@ function formatDateTime(value: string) {
   }).format(new Date(value));
 }
 
-function showInfo(message: string) {
+function showInfo(title: string, message: string) {
   if (typeof globalThis.alert === 'function') {
-    globalThis.alert(message);
+    globalThis.alert(`${title}\n\n${message}`);
     return;
   }
 
-  Alert.alert('Confia', message);
+  Alert.alert(title, message, [{ text: 'OK' }]);
 }
 
 async function handleResidentToGatehouseCall(
+  user: AuthenticatedUser,
   unitId: string,
   unitLabels: Map<string, string>,
   setHistory: (history: CallRecord[]) => void,
@@ -368,15 +374,36 @@ async function handleResidentToGatehouseCall(
   setFeedback: (message: string | null) => void,
   setActiveCallTarget: (target: string | null) => void,
 ) {
+  const startedAt = Date.now();
   setFeedback('Chamando portaria...');
   setActiveCallTarget('portaria');
+  void logCallDiagnostic({ action: 'resident_call_gatehouse', result: 'STARTED', unitId, user });
 
   try {
     const call = await startResidentToGatehouseCall(unitId);
+    void logCallDiagnostic({
+      action: 'resident_call_gatehouse',
+      callId: call.id,
+      durationMs: Date.now() - startedAt,
+      metadata: { backend_status: call.status },
+      result: 'SUCCESS',
+      unitId,
+      user,
+    });
     setFeedback(`Chamada iniciada para a portaria. Status: ${call.status}.`);
     await refreshResidentData(unitLabels, setHistory, setPendingCalls, setFeedback, { silent: true });
   } catch (err) {
-    setFeedback(`Nao foi possivel chamar a portaria: ${err instanceof Error ? err.message : 'Tente novamente.'}`);
+    const message = getErrorMessage(err);
+    void logCallDiagnostic({
+      action: 'resident_call_gatehouse',
+      durationMs: Date.now() - startedAt,
+      errorMessage: message,
+      result: 'ERROR',
+      unitId,
+      user,
+    });
+    setFeedback(null);
+    showInfo('Nao foi possivel chamar a portaria', message);
   } finally {
     setActiveCallTarget(null);
   }
@@ -384,56 +411,97 @@ async function handleResidentToGatehouseCall(
 
 async function handleAnswerResidentCall(
   callId: string,
-  userId: string,
+  user: AuthenticatedUser,
   unitLabels: Map<string, string>,
   setHistory: (history: CallRecord[]) => void,
   setPendingCalls: (calls: PendingUnitCall[]) => void,
   setFeedback: (message: string | null) => void,
 ) {
+  const startedAt = Date.now();
   setFeedback('Atendendo chamada...');
+  void logCallDiagnostic({ action: 'resident_answer_call', callId, result: 'STARTED', user });
 
   try {
-    const call = await answerResidentCall(callId, userId);
+    const call = await answerResidentCall(callId, user.id);
+    void logCallDiagnostic({
+      action: 'resident_answer_call',
+      callId,
+      durationMs: Date.now() - startedAt,
+      metadata: { backend_status: call.status },
+      result: 'SUCCESS',
+      user,
+    });
     setFeedback(`Chamada atendida. Status: ${call.status}.`);
     await refreshResidentData(unitLabels, setHistory, setPendingCalls, setFeedback);
   } catch (err) {
-    setFeedback(`Nao foi possivel atender: ${err instanceof Error ? err.message : 'Tente novamente.'}`);
+    const message = getErrorMessage(err);
+    void logCallDiagnostic({ action: 'resident_answer_call', callId, durationMs: Date.now() - startedAt, errorMessage: message, result: 'ERROR', user });
+    setFeedback(null);
+    showInfo('Nao foi possivel atender', message);
   }
 }
 
 async function handleCancelCall(
   callId: string,
+  user: AuthenticatedUser,
   unitLabels: Map<string, string>,
   setHistory: (history: CallRecord[]) => void,
   setPendingCalls: (calls: PendingUnitCall[]) => void,
   setFeedback: (message: string | null) => void,
 ) {
+  const startedAt = Date.now();
   setFeedback('Cancelando chamada...');
+  void logCallDiagnostic({ action: 'resident_cancel_call', callId, result: 'STARTED', user });
 
   try {
     const call = await cancelCall(callId);
+    void logCallDiagnostic({
+      action: 'resident_cancel_call',
+      callId,
+      durationMs: Date.now() - startedAt,
+      metadata: { backend_status: call.status },
+      result: 'SUCCESS',
+      user,
+    });
     setFeedback(`Chamada cancelada. Status: ${call.status}.`);
     await refreshResidentData(unitLabels, setHistory, setPendingCalls, setFeedback);
   } catch (err) {
-    setFeedback(`Nao foi possivel cancelar: ${err instanceof Error ? err.message : 'Tente novamente.'}`);
+    const message = getErrorMessage(err);
+    void logCallDiagnostic({ action: 'resident_cancel_call', callId, durationMs: Date.now() - startedAt, errorMessage: message, result: 'ERROR', user });
+    setFeedback(null);
+    showInfo('Nao foi possivel cancelar', message);
   }
 }
 
 async function handleEndCall(
   callId: string,
+  user: AuthenticatedUser,
   unitLabels: Map<string, string>,
   setHistory: (history: CallRecord[]) => void,
   setPendingCalls: (calls: PendingUnitCall[]) => void,
   setFeedback: (message: string | null) => void,
 ) {
+  const startedAt = Date.now();
   setFeedback('Encerrando chamada...');
+  void logCallDiagnostic({ action: 'resident_end_call', callId, result: 'STARTED', user });
 
   try {
     const call = await endCall(callId);
+    void logCallDiagnostic({
+      action: 'resident_end_call',
+      callId,
+      durationMs: Date.now() - startedAt,
+      metadata: { backend_status: call.status },
+      result: 'SUCCESS',
+      user,
+    });
     setFeedback(`Chamada encerrada. Status: ${call.status}.`);
     await refreshResidentData(unitLabels, setHistory, setPendingCalls, setFeedback);
   } catch (err) {
-    setFeedback(`Nao foi possivel encerrar: ${err instanceof Error ? err.message : 'Tente novamente.'}`);
+    const message = getErrorMessage(err);
+    void logCallDiagnostic({ action: 'resident_end_call', callId, durationMs: Date.now() - startedAt, errorMessage: message, result: 'ERROR', user });
+    setFeedback(null);
+    showInfo('Nao foi possivel encerrar', message);
   }
 }
 
@@ -441,21 +509,46 @@ async function handleResidentToUnitCall(
   originUnitId: string,
   targetUnitId: string,
   targetLabel: string,
+  user: AuthenticatedUser,
   unitLabels: Map<string, string>,
   setHistory: (history: CallRecord[]) => void,
   setPendingCalls: (calls: PendingUnitCall[]) => void,
   setFeedback: (message: string | null) => void,
   setActiveCallTarget: (target: string | null) => void,
 ) {
+  const startedAt = Date.now();
   setFeedback(`Chamando ${targetLabel}...`);
   setActiveCallTarget(targetUnitId);
+  void logCallDiagnostic({ action: 'resident_call_unit', result: 'STARTED', targetUnitId, unitId: originUnitId, user });
 
   try {
     const call = await startResidentToUnitCall(originUnitId, targetUnitId);
+    void logCallDiagnostic({
+      action: 'resident_call_unit',
+      callId: call.id,
+      durationMs: Date.now() - startedAt,
+      metadata: { backend_status: call.status, target_label: targetLabel },
+      result: 'SUCCESS',
+      targetUnitId,
+      unitId: originUnitId,
+      user,
+    });
     setFeedback(`Chamada iniciada para ${targetLabel}. Status: ${call.status}.`);
     await refreshResidentData(unitLabels, setHistory, setPendingCalls, setFeedback, { silent: true });
   } catch (err) {
-    setFeedback(`Nao foi possivel chamar ${targetLabel}: ${err instanceof Error ? err.message : 'Tente novamente.'}`);
+    const message = getErrorMessage(err);
+    void logCallDiagnostic({
+      action: 'resident_call_unit',
+      durationMs: Date.now() - startedAt,
+      errorMessage: message,
+      metadata: { target_label: targetLabel },
+      result: 'ERROR',
+      targetUnitId,
+      unitId: originUnitId,
+      user,
+    });
+    setFeedback(null);
+    showInfo(`Nao foi possivel chamar ${targetLabel}`, message);
   } finally {
     setActiveCallTarget(null);
   }
