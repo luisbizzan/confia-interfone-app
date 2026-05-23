@@ -449,6 +449,11 @@ Entregas iniciadas:
   - `expo-asset` e `expo-font` foram adicionados explicitamente na versao compativel com SDK 54;
   - arvore nativa passou a ficar alinhada em `expo-asset@12.0.13`, `expo-font@14.0.11`, `expo-constants@18.0.13` e `expo-modules-core@3.0.30`;
   - `expo install --check`, `tsc --noEmit` e `expo export --platform android` passaram depois da correcao.
+- Correcao de variaveis publicas no APK `preview`:
+  - APK corrigido abriu, mas exibiu aviso de Supabase nao configurado;
+  - variaveis `EXPO_PUBLIC_SUPABASE_URL` e `EXPO_PUBLIC_SUPABASE_ANON_KEY` existiam no ambiente `preview` do EAS;
+  - causa identificada: o perfil `preview` do `eas.json` nao declarava `environment = preview`;
+  - perfil `preview` passou a carregar explicitamente o ambiente `preview` para injetar as variaveis publicas no bundle.
 
 Regras de seguranca:
 

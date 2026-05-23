@@ -514,6 +514,7 @@ Fases de CI:
 - Build Android `preview` deve ser validado antes de demonstracoes, pois ele usa Hermes/release bundle e pode revelar erros que nao aparecem no Metro.
 - O pacote `@supabase/supabase-js` esta fixo em `2.86.0` por compatibilidade com Hermes; upgrades futuros precisam rodar `expo export --platform android` antes de gerar APK.
 - Dependencias nativas Expo devem ser conferidas com `npm ls expo-asset expo-font expo-constants expo-modules-core`, pois peer dependency de modulo nativo pode instalar versao de outro SDK e causar crash antes do app iniciar.
+- Builds EAS precisam declarar o `environment` correto no perfil; sem isso, variaveis `EXPO_PUBLIC_*` podem existir no EAS mas nao entrar no APK.
 
 ## Recomendacao de implementacao
 
@@ -550,3 +551,4 @@ A estrategia inicial sera considerada pronta quando conseguirmos rodar, de forma
 - validacao de historico.
 - APK Android `preview` abre sem depender de Metro/QR local.
 - APK Android `preview` passa pela abertura inicial sem tela nativa de feedback/crash.
+- APK Android `preview` abre login real sem aviso de Supabase nao configurado.
