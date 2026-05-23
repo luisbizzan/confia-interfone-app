@@ -223,6 +223,24 @@ Atualizacao apos monitor global de chamadas com app aberto:
   - APK `preview` instalado via ADB no aparelho `SM-N981B`;
   - abertura inicial confirmada por logcat sem crash nativo.
 
+Atualizacao apos regra de ocupacao no backend:
+
+- Playwright deve validar bloqueio operacional quando ja existe chamada ativa/pendente:
+  - morador A chama portaria e mantem a chamada em `RINGING`;
+  - morador B tenta chamar portaria;
+  - app deve exibir `A portaria esta em atendimento. Tente novamente em alguns minutos.`;
+  - portaria atende morador A e mantem a chamada em andamento;
+  - morador B tenta novamente e recebe a mesma mensagem.
+- Validar unidade ocupada:
+  - portaria chama unidade A ou morador B chama unidade A;
+  - outra origem tenta chamar unidade A;
+  - app deve exibir `Esta unidade esta em atendimento. Tente novamente em alguns minutos.`
+- Validar origem ocupada:
+  - morador A esta em chamada;
+  - morador A tenta iniciar outra chamada;
+  - app deve exibir `Sua unidade esta em atendimento. Encerre a chamada atual antes de iniciar outra.`
+- Validar que, apos `end_call`, a nova chamada volta a ser permitida.
+
 Estrategia de push notifications:
 
 - A automacao web cobre apenas o app aberto.

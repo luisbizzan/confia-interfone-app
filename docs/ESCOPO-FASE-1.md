@@ -472,6 +472,12 @@ Entregas iniciadas:
   - artefato `https://expo.dev/artifacts/eas/qzqaCrngGphC281p7hZV5n.apk`;
   - instalado via ADB no dispositivo `SM-N981B`;
   - abertura inicial validada por logcat sem `FATAL EXCEPTION`, `AndroidRuntime` ou crash de modulo nativo.
+- Regra de ocupacao aplicada no backend:
+  - migration `20260523130500_block_busy_call_targets.sql` aplicada no Supabase remoto;
+  - nova chamada para portaria e bloqueada quando a portaria ja estiver em `RINGING` ou `ANSWERED` sem `ended_at`;
+  - nova chamada para unidade e bloqueada quando a unidade ja estiver em `RINGING` ou `ANSWERED` sem `ended_at`;
+  - origem tambem fica protegida: unidade ou portaria em atendimento nao inicia outra chamada;
+  - app recebe mensagens amigaveis do backend para exibir ao usuario.
 
 Regras de seguranca:
 
