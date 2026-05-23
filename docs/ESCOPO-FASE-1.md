@@ -459,6 +459,13 @@ Entregas iniciadas:
   - criado `app.config.js` para ler `process.env` durante o build e gravar valores reais em `extra`;
   - `env.ts` passou a priorizar `Constants.expoConfig.extra`, mantendo `process.env` apenas como fallback;
   - `expo config --type public` confirmou `supabaseUrl`, `supabaseAnonKey` e `enableErrorTest` resolvidos antes do build.
+- Monitor global de chamadas com app aberto:
+  - criado monitor de chamadas no nivel raiz do app para quando o usuario estiver logado e fora da tela `Interfone`;
+  - Home e Configuracoes passam a detectar chamadas recebidas por polling curto;
+  - chamada recebida fora da tela Interfone abre a mesma experiencia focada de atendimento, com toque e vibracao;
+  - chamada atendida fora da tela Interfone passa a abrir a mesma tela de chamada em andamento e conectar o audio LiveKit;
+  - chamadas originadas ainda em `RINGING` tambem aparecem como tela de espera/cancelamento quando detectadas pelo monitor global;
+  - quando o usuario entra na aba Interfone, o monitor global pausa para evitar duplicidade com o fluxo operacional da propria tela.
 
 Regras de seguranca:
 
@@ -494,6 +501,7 @@ Escopo previsto restante:
 - Configurar secrets `GITHUB_TOKEN` e `GITHUB_REPOSITORY` no Supabase para ativar criacao real de issues.
 - Validar deduplicacao criando duas ocorrencias do mesmo erro e conferindo que a issue e reaproveitada.
 - Para teste manual do simulador, iniciar o app com `EXPO_PUBLIC_ENABLE_ERROR_TEST=true`.
+- Validar em dois aparelhos que chamada recebida toca e abre a tela de atendimento quando o destinatario esta na Home ou em Configuracoes.
 
 ### Fase 3 - Notificacoes e background
 
@@ -502,8 +510,10 @@ Objetivo: permitir chamadas recebidas com app em segundo plano.
 Escopo previsto:
 
 - Push notifications.
-- Firebase Cloud Messaging para Android.
-- Apple Push Notification service para iOS.
+- `expo-notifications` com Expo Push Service como barramento inicial unico para Android e iOS.
+- Armazenamento de `ExpoPushToken` por usuario/dispositivo no Supabase.
+- Envio de push pelo backend quando uma chamada for criada ou quando novas funcionalidades precisarem avisar o usuario.
+- Firebase Cloud Messaging para Android e Apple Push Notification service para iOS ficam encapsulados pelo Expo Push Service na primeira versao.
 - Avaliar CallKit no iOS.
 - Avaliar ConnectionService no Android.
 - Beta fechado/TestFlight/internal testing.

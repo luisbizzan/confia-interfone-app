@@ -200,6 +200,38 @@ Atualizacao apos toque/vibracao de chamada recebida:
   - toque e vibracao param ao cancelar/encerrar;
   - toque nao permanece em loop ao voltar para home.
 
+Atualizacao apos monitor global de chamadas com app aberto:
+
+- Playwright web deve validar que o app aberto detecta chamada recebida mesmo fora da aba `Interfone`.
+- Fluxos novos para automacao:
+  - morador logado permanece na Home;
+  - portaria inicia chamada para a unidade do morador;
+  - sessao do morador deve trocar automaticamente para a experiencia de chamada recebida;
+  - morador atende;
+  - sessao do morador deve trocar para chamada em andamento;
+  - repetir o mesmo fluxo com morador ou portaria na aba `Configuracoes`.
+- Como Playwright nao valida audio/vibracao nativos, os criterios nativos continuam manuais:
+  - chamada recebida na Home toca e vibra;
+  - chamada recebida em Configuracoes toca e vibra;
+  - ao atender fora da aba Interfone, o audio LiveKit conecta como na tela Interfone;
+  - ao abrir a aba Interfone durante uma chamada, nao deve existir duplicidade de telas ou chamadas.
+- Teste de regressao:
+  - com usuario dentro da aba Interfone, o monitor global nao deve criar uma segunda experiencia de chamada.
+
+Estrategia de push notifications:
+
+- A automacao web cobre apenas o app aberto.
+- Para app em segundo plano ou fechado, a estrategia passa a depender de teste mobile nativo.
+- O plano recomendado para evitar retrabalho e usar `expo-notifications` com Expo Push Service:
+  - Android e iOS usam a mesma API no app;
+  - o backend armazena `ExpoPushToken` por usuario/dispositivo;
+  - Edge Functions enviam notificacoes para chamadas e futuras funcionalidades;
+  - depois, CallKit/ConnectionService podem melhorar a experiencia de chamada sem trocar o barramento de push.
+- Playwright pode validar a parte administrativa futura:
+  - token de push salvo no backend;
+  - Edge Function de envio retorna sucesso para payload mockado;
+  - feature flag de notificacao habilitada por condominio/pacote.
+
 Atualizacao apos observabilidade de erros - Fase 1:
 
 - Playwright deve validar a experiencia web de erro controlado usando uma rota/flag de teste futura, sem quebrar dados reais.

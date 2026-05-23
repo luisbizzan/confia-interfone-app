@@ -1,18 +1,28 @@
 import { StatusBar } from 'expo-status-bar';
 import { MaterialIcons } from '@expo/vector-icons';
-import { useEffect, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { ActivityIndicator, Platform, SafeAreaView, ScrollView, StatusBar as NativeStatusBar, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 
 import { AppErrorBoundary } from './src/components/AppErrorBoundary';
+import { ActiveCallExperience, IncomingCallExperience, OutgoingCallExperience } from './src/components/CallExperience';
 import { AppHomeScreen } from './src/screens/AppHomeScreen';
 import { LoginScreen } from './src/screens/LoginScreen';
 import { ResidentHomeScreen } from './src/screens/ResidentHomeScreen';
 import { GatehouseHomeScreen } from './src/screens/GatehouseHomeScreen';
 import { env } from './src/config/env';
+import { answerGatehouseCall, answerResidentCall, cancelCall, endCall, getMyCallHistory, getMyPendingCalls } from './src/services/calls';
 import { loadCurrentAuthState, signInWithEmail, signOut, type LoadedAuthState } from './src/services/auth';
 import { clearErrorReportingContext, registerGlobalErrorHandlers, reportAppError, setErrorReportingContext } from './src/services/error-reporting';
 import { theme } from './src/theme/theme';
-import type { AuthenticatedUser, UserContext } from './src/types/domain';
+import type { AuthenticatedUser, BackendCallRecord, CallRecord, PendingPortariaCall, PendingUnitCall, UnitDirectoryItem, UserContext } from './src/types/domain';
+
+const GLOBAL_CALL_REFRESH_INTERVAL_MS = 5000;
+
+type GlobalCallState =
+  | { status: 'idle'; feedback?: string }
+  | { status: 'incoming'; feedback?: string; call: PendingUnitCall | PendingPortariaCall }
+  | { status: 'outgoing'; feedback?: string; call: CallRecord }
+  | { status: 'active'; feedback?: string; call: CallRecord };
 
 export default function App() {
   return (
@@ -27,6 +37,7 @@ function AppContent() {
   const [isBooting, setIsBooting] = useState(true);
   const [activeView, setActiveView] = useState<'home' | 'intercom' | 'settings'>('home');
   const [shouldSimulateError, setShouldSimulateError] = useState(false);
+  const [globalCallState, setGlobalCallState] = useState<GlobalCallState>({ status: 'idle' });
 
   useEffect(() => {
     registerGlobalErrorHandlers();
@@ -80,7 +91,50 @@ function AppContent() {
     await signOut();
     setAuthState({ status: 'unauthenticated' });
     setActiveView('home');
+    setGlobalCallState({ status: 'idle' });
   }
+
+  const authenticatedState = authState.status === 'authenticated' ? authState : null;
+  const intercomEnabled = authenticatedState ? authenticatedState.context.features?.INTERCOM !== false : false;
+  const unitLabels = useMemo(
+    () => (authenticatedState ? buildUnitLabelMap(authenticatedState.context, authenticatedState.units) : new Map<string, string>()),
+    [authenticatedState],
+  );
+  const shouldRunGlobalCallMonitor = Boolean(authenticatedState && intercomEnabled && activeView !== 'intercom');
+
+  useEffect(() => {
+    if (!authenticatedState || !shouldRunGlobalCallMonitor) {
+      setGlobalCallState({ status: 'idle' });
+      return undefined;
+    }
+
+    let mounted = true;
+
+    const refresh = async (options?: { silent?: boolean }) => {
+      try {
+        const nextState = await loadGlobalCallState(authenticatedState.user, unitLabels);
+
+        if (mounted) {
+          setGlobalCallState(nextState);
+        }
+      } catch (error) {
+        if (mounted && !options?.silent) {
+          setGlobalCallState({
+            status: 'idle',
+            feedback: `Nao foi possivel monitorar chamadas: ${error instanceof Error ? error.message : 'Tente novamente.'}`,
+          });
+        }
+      }
+    };
+
+    void refresh();
+    const interval = setInterval(() => void refresh({ silent: true }), GLOBAL_CALL_REFRESH_INTERVAL_MS);
+
+    return () => {
+      mounted = false;
+      clearInterval(interval);
+    };
+  }, [authenticatedState, shouldRunGlobalCallMonitor, unitLabels]);
 
   if (isBooting) {
     return (
@@ -94,7 +148,7 @@ function AppContent() {
     );
   }
 
-  if (authState.status === 'unauthenticated') {
+  if (!authenticatedState) {
     return (
       <SafeAreaView style={styles.safeArea}>
         <StatusBar style="dark" />
@@ -103,8 +157,7 @@ function AppContent() {
     );
   }
 
-  const { user, context, units } = authState;
-  const intercomEnabled = context.features?.INTERCOM !== false;
+  const { user, context, units } = authenticatedState;
 
   return (
     <SafeAreaView style={styles.safeArea}>
@@ -120,17 +173,50 @@ function AppContent() {
       </View>
 
       <ScrollView contentContainerStyle={styles.content}>
-        {activeView === 'home' ? (
+        {globalCallState.status === 'incoming' ? (
+          <IncomingCallExperience
+            callerLabel={pendingCallTitle(globalCallState.call, unitLabels, user.profile)}
+            onAnswer={() => handleGlobalAnswer(user, unitLabels, setGlobalCallState, globalCallState.call)}
+            onRefresh={() => refreshGlobalCallState(user, unitLabels, setGlobalCallState)}
+            startedAt={formatDateTime(globalCallState.call.started_at)}
+            targetLabel={user.profile === 'gatehouse' ? 'Portaria' : 'Sua unidade'}
+          />
+        ) : null}
+        {globalCallState.status === 'active' ? (
+          <ActiveCallExperience
+            call={globalCallState.call}
+            onEnd={() => handleGlobalEnd(user, unitLabels, setGlobalCallState, globalCallState.call.id)}
+          />
+        ) : null}
+        {globalCallState.status === 'outgoing' ? (
+          <OutgoingCallExperience
+            call={globalCallState.call}
+            onCancel={() => handleGlobalCancel(user, unitLabels, setGlobalCallState, globalCallState.call.id)}
+          />
+        ) : null}
+        {globalCallState.status !== 'idle' && globalCallState.feedback ? (
+          <View style={styles.monitorFeedback}>
+            <Text style={styles.monitorFeedbackText}>{globalCallState.feedback}</Text>
+          </View>
+        ) : null}
+        {globalCallState.status === 'idle' && globalCallState.feedback ? (
+          <View style={styles.monitorFeedback}>
+            <Text style={styles.monitorFeedbackText}>{globalCallState.feedback}</Text>
+          </View>
+        ) : null}
+        {globalCallState.status === 'idle' && activeView === 'home' ? (
           <AppHomeScreen context={context} onOpenIntercom={() => setActiveView('intercom')} user={user} />
         ) : null}
-        {activeView === 'settings' ? <SettingsView context={context} onSimulateError={() => setShouldSimulateError(true)} user={user} /> : null}
-        {activeView === 'intercom' && intercomEnabled && user.profile === 'resident' ? (
+        {globalCallState.status === 'idle' && activeView === 'settings' ? (
+          <SettingsView context={context} onSimulateError={() => setShouldSimulateError(true)} user={user} />
+        ) : null}
+        {globalCallState.status === 'idle' && activeView === 'intercom' && intercomEnabled && user.profile === 'resident' ? (
           <ResidentHomeScreen context={context} directoryUnits={units} user={user} />
         ) : null}
-        {activeView === 'intercom' && intercomEnabled && user.profile === 'gatehouse' ? (
+        {globalCallState.status === 'idle' && activeView === 'intercom' && intercomEnabled && user.profile === 'gatehouse' ? (
           <GatehouseHomeScreen context={context} directoryUnits={units} user={user} />
         ) : null}
-        {activeView === 'intercom' && !intercomEnabled ? (
+        {globalCallState.status === 'idle' && activeView === 'intercom' && !intercomEnabled ? (
           <View style={styles.unavailable}>
             <Text style={styles.unavailableTitle}>Interfone indisponivel</Text>
             <Text style={styles.unavailableText}>Este recurso nao esta habilitado para o condominio.</Text>
@@ -202,6 +288,161 @@ function SettingsView({ context, onSimulateError, user }: { context: UserContext
       ) : null}
     </View>
   );
+}
+
+function buildUnitLabelMap(context: UserContext, units: UnitDirectoryItem[]) {
+  const labels = new Map<string, string>();
+
+  for (const unit of units) {
+    labels.set(unit.id, unit.label);
+  }
+
+  for (const member of context.unit_members) {
+    labels.set(member.unit_id, formatUnitLabel(member.unit));
+  }
+
+  return labels;
+}
+
+function formatUnitLabel(unit: UserContext['unit_members'][number]['unit']) {
+  return [unit.block, unit.number].filter(Boolean).join(' - ');
+}
+
+async function loadGlobalCallState(user: AuthenticatedUser, unitLabels: Map<string, string>): Promise<GlobalCallState> {
+  const [pendingCalls, history] = await Promise.all([getMyPendingCalls(), getMyCallHistory()]);
+  const incomingCall = user.profile === 'gatehouse' ? pendingCalls.portaria_calls?.[0] : pendingCalls.unit_calls?.[0];
+  const calls = history.map((call) => mapBackendCall(call, unitLabels));
+  const activeCall = calls.find((call) => call.status === 'ANSWERED' && !call.endedAt);
+  const outgoingCall = calls.find((call) => call.status === 'RINGING' && !call.endedAt);
+
+  if (incomingCall) {
+    return { status: 'incoming', call: incomingCall };
+  }
+
+  if (activeCall) {
+    return { status: 'active', call: activeCall };
+  }
+
+  if (outgoingCall) {
+    return { status: 'outgoing', call: outgoingCall };
+  }
+
+  return { status: 'idle' };
+}
+
+async function refreshGlobalCallState(
+  user: AuthenticatedUser,
+  unitLabels: Map<string, string>,
+  setGlobalCallState: (state: GlobalCallState) => void,
+) {
+  try {
+    setGlobalCallState(await loadGlobalCallState(user, unitLabels));
+  } catch (error) {
+    setGlobalCallState({
+      status: 'idle',
+      feedback: `Nao foi possivel atualizar chamadas: ${error instanceof Error ? error.message : 'Tente novamente.'}`,
+    });
+  }
+}
+
+async function handleGlobalAnswer(
+  user: AuthenticatedUser,
+  unitLabels: Map<string, string>,
+  setGlobalCallState: (state: GlobalCallState) => void,
+  call: PendingUnitCall | PendingPortariaCall,
+) {
+  try {
+    if (user.profile === 'gatehouse') {
+      await answerGatehouseCall(call.call_id);
+    } else {
+      await answerResidentCall(call.call_id, user.id);
+    }
+
+    await refreshGlobalCallState(user, unitLabels, setGlobalCallState);
+  } catch (error) {
+    setGlobalCallState({
+      status: 'incoming',
+      call,
+      feedback: `Nao foi possivel atender: ${error instanceof Error ? error.message : 'Tente novamente.'}`,
+    });
+  }
+}
+
+async function handleGlobalCancel(
+  user: AuthenticatedUser,
+  unitLabels: Map<string, string>,
+  setGlobalCallState: (state: GlobalCallState) => void,
+  callId: string,
+) {
+  try {
+    await cancelCall(callId);
+    await refreshGlobalCallState(user, unitLabels, setGlobalCallState);
+  } catch (error) {
+    setGlobalCallState({
+      status: 'idle',
+      feedback: `Nao foi possivel cancelar: ${error instanceof Error ? error.message : 'Tente novamente.'}`,
+    });
+  }
+}
+
+async function handleGlobalEnd(
+  user: AuthenticatedUser,
+  unitLabels: Map<string, string>,
+  setGlobalCallState: (state: GlobalCallState) => void,
+  callId: string,
+) {
+  try {
+    await endCall(callId);
+    await refreshGlobalCallState(user, unitLabels, setGlobalCallState);
+  } catch (error) {
+    setGlobalCallState({
+      status: 'idle',
+      feedback: `Nao foi possivel encerrar: ${error instanceof Error ? error.message : 'Tente novamente.'}`,
+    });
+  }
+}
+
+function mapBackendCall(call: BackendCallRecord, unitLabels: Map<string, string>): CallRecord {
+  const targetUnit = unitLabels.get(call.unit_id) ?? 'Unidade';
+  const originUnit = call.origin_unit_id ? unitLabels.get(call.origin_unit_id) ?? 'Unidade' : 'Unidade';
+
+  return {
+    id: call.id,
+    direction:
+      call.origin_type === 'PORTARIA'
+        ? 'gatehouse_to_unit'
+        : call.target_type === 'PORTARIA'
+          ? 'resident_to_gatehouse'
+          : 'resident_to_unit',
+    endedAt: call.ended_at,
+    fromLabel: call.origin_type === 'PORTARIA' ? 'Portaria' : originUnit,
+    toLabel: call.target_type === 'PORTARIA' ? 'Portaria' : targetUnit,
+    status: call.status,
+    startedAt: formatDateTime(call.started_at),
+  };
+}
+
+function pendingCallTitle(call: PendingUnitCall | PendingPortariaCall, unitLabels: Map<string, string>, profile: AuthenticatedUser['profile']) {
+  if (profile === 'gatehouse') {
+    return `${unitLabels.get(call.origin_unit_id ?? call.unit_id) ?? 'Unidade'} para Portaria`;
+  }
+
+  if (call.origin_type === 'PORTARIA') {
+    return `Portaria para ${unitLabels.get(call.unit_id) ?? 'sua unidade'}`;
+  }
+
+  return `${call.origin_unit_id ? unitLabels.get(call.origin_unit_id) ?? 'Unidade' : 'Unidade'} para ${
+    unitLabels.get(call.unit_id) ?? 'sua unidade'
+  }`;
+}
+
+function formatDateTime(value: string) {
+  return new Intl.DateTimeFormat('pt-BR', {
+    day: '2-digit',
+    hour: '2-digit',
+    minute: '2-digit',
+    month: '2-digit',
+  }).format(new Date(value));
 }
 
 function ErrorSimulationTrigger(): never {
@@ -283,6 +524,19 @@ const styles = StyleSheet.create({
   },
   navigationLabelActive: {
     color: theme.colors.primary,
+  },
+  monitorFeedback: {
+    backgroundColor: '#fff7ed',
+    borderColor: '#fed7aa',
+    borderRadius: theme.radius.md,
+    borderWidth: 1,
+    marginBottom: theme.spacing.md,
+    padding: theme.spacing.md,
+  },
+  monitorFeedbackText: {
+    color: '#9a3412',
+    fontSize: 14,
+    fontWeight: '800',
   },
   unavailable: {
     backgroundColor: theme.colors.surface,
