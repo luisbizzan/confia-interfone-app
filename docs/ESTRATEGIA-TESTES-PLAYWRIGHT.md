@@ -217,6 +217,11 @@ Atualizacao apos monitor global de chamadas com app aberto:
   - ao abrir a aba Interfone durante uma chamada, nao deve existir duplicidade de telas ou chamadas.
 - Teste de regressao:
   - com usuario dentro da aba Interfone, o monitor global nao deve criar uma segunda experiencia de chamada.
+- Build nativo instalada para validacao manual:
+  - EAS build Android `c705c3dc-34db-4f60-956c-a0ea26bb0fd9`;
+  - commit `3ae6a64 Monitor calls outside intercom screen`;
+  - APK `preview` instalado via ADB no aparelho `SM-N981B`;
+  - abertura inicial confirmada por logcat sem crash nativo.
 
 Estrategia de push notifications:
 

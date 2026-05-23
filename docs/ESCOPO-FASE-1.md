@@ -466,6 +466,12 @@ Entregas iniciadas:
   - chamada atendida fora da tela Interfone passa a abrir a mesma tela de chamada em andamento e conectar o audio LiveKit;
   - chamadas originadas ainda em `RINGING` tambem aparecem como tela de espera/cancelamento quando detectadas pelo monitor global;
   - quando o usuario entra na aba Interfone, o monitor global pausa para evitar duplicidade com o fluxo operacional da propria tela.
+- APK preview instalado no aparelho conectado:
+  - build EAS Android `c705c3dc-34db-4f60-956c-a0ea26bb0fd9`;
+  - commit embarcado `3ae6a64 Monitor calls outside intercom screen`;
+  - artefato `https://expo.dev/artifacts/eas/qzqaCrngGphC281p7hZV5n.apk`;
+  - instalado via ADB no dispositivo `SM-N981B`;
+  - abertura inicial validada por logcat sem `FATAL EXCEPTION`, `AndroidRuntime` ou crash de modulo nativo.
 
 Regras de seguranca:
 
