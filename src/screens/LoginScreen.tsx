@@ -1,5 +1,16 @@
 import { useState } from 'react';
-import { ActivityIndicator, StyleSheet, Text, TextInput, View } from 'react-native';
+import {
+  ActivityIndicator,
+  Keyboard,
+  KeyboardAvoidingView,
+  Platform,
+  ScrollView,
+  StyleSheet,
+  Text,
+  TextInput,
+  TouchableWithoutFeedback,
+  View,
+} from 'react-native';
 
 import { Card } from '../components/Card';
 import { PrimaryButton } from '../components/PrimaryButton';
@@ -35,54 +46,71 @@ export function LoginScreen({ onLogin }: LoginScreenProps) {
   }
 
   return (
-    <View style={styles.container}>
-      <Card>
-        <Text style={styles.brand}>Confia</Text>
-        <Text style={styles.title}>Interfone Digital</Text>
-        <Text style={styles.description}>Entre com o usuario criado no backoffice para morador ou portaria.</Text>
+    <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : 'height'} style={styles.keyboardView}>
+      <TouchableWithoutFeedback accessible={false} onPress={Keyboard.dismiss}>
+        <ScrollView
+          contentContainerStyle={styles.container}
+          keyboardShouldPersistTaps="handled"
+          showsVerticalScrollIndicator={false}
+        >
+          <Card>
+            <Text style={styles.brand}>Confia</Text>
+            <Text style={styles.title}>Interfone Digital</Text>
+            <Text style={styles.description}>Entre com o usuario criado no backoffice para morador ou portaria.</Text>
 
-        {!hasSupabaseConfig ? (
-          <View style={styles.warning}>
-            <Text style={styles.warningText}>
-              Configure EXPO_PUBLIC_SUPABASE_URL e EXPO_PUBLIC_SUPABASE_ANON_KEY para ativar o login real.
-            </Text>
-          </View>
-        ) : null}
+            {!hasSupabaseConfig ? (
+              <View style={styles.warning}>
+                <Text style={styles.warningText}>
+                  Configure EXPO_PUBLIC_SUPABASE_URL e EXPO_PUBLIC_SUPABASE_ANON_KEY para ativar o login real.
+                </Text>
+              </View>
+            ) : null}
 
-        <View style={styles.form}>
-          <TextInput
-            autoCapitalize="none"
-            autoComplete="email"
-            keyboardType="email-address"
-            onChangeText={setEmail}
-            placeholder="E-mail"
-            style={styles.input}
-            value={email}
-          />
-          <TextInput
-            autoCapitalize="none"
-            onChangeText={setPassword}
-            placeholder="Senha"
-            secureTextEntry
-            style={styles.input}
-            value={password}
-          />
-        </View>
+            <View style={styles.form}>
+              <TextInput
+                autoCapitalize="none"
+                autoComplete="email"
+                keyboardType="email-address"
+                onChangeText={setEmail}
+                placeholder="E-mail"
+                returnKeyType="next"
+                style={styles.input}
+                textContentType="username"
+                value={email}
+              />
+              <TextInput
+                autoCapitalize="none"
+                onChangeText={setPassword}
+                onSubmitEditing={handleSubmit}
+                placeholder="Senha"
+                returnKeyType="done"
+                secureTextEntry
+                style={styles.input}
+                textContentType="password"
+                value={password}
+              />
+            </View>
 
-        {error ? <Text style={styles.error}>{error}</Text> : null}
+            {error ? <Text style={styles.error}>{error}</Text> : null}
 
-        <View style={styles.actions}>
-          {isSubmitting ? <ActivityIndicator color={theme.colors.primary} /> : <PrimaryButton label="Entrar" onPress={handleSubmit} />}
-        </View>
-      </Card>
-    </View>
+            <View style={styles.actions}>
+              {isSubmitting ? <ActivityIndicator color={theme.colors.primary} /> : <PrimaryButton label="Entrar" onPress={handleSubmit} />}
+            </View>
+          </Card>
+        </ScrollView>
+      </TouchableWithoutFeedback>
+    </KeyboardAvoidingView>
   );
 }
 
 const styles = StyleSheet.create({
-  container: {
+  keyboardView: {
     flex: 1,
+  },
+  container: {
+    flexGrow: 1,
     justifyContent: 'center',
+    minHeight: '100%',
     padding: theme.spacing.lg,
   },
   brand: {

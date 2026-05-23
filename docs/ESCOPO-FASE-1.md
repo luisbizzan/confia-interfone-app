@@ -544,6 +544,7 @@ Escopo previsto restante:
   - APK baixado e validado como arquivo integro;
   - instalacao ADB nao executada porque nenhum dispositivo estava conectado/autorizado no momento da verificacao.
   - analise visual dos videos confirmou pontos adicionais de UX:
+    - login precisava se adaptar melhor ao teclado no celular;
     - remover botao manual `Atualizar` da tela de chamada recebida;
     - trocar feedback pos-encerramento para mensagem amigavel sem `Status: ANSWERED`;
     - abrir tela cheia de `Chamando` imediatamente apos a RPC criar uma chamada, antes do proximo polling;
@@ -552,6 +553,7 @@ Escopo previsto restante:
   - commit embarcado `14c1f94 Refine call UX from device videos`;
   - artefato `https://expo.dev/artifacts/eas/tmxZSDx6kN4WCcQPsaZC4L.apk`;
   - APK baixado e validado como arquivo integro.
+  - login ajustado com `KeyboardAvoidingView`, scroll e envio pelo teclado para melhorar uso em aparelhos Android/iOS.
 
 ### Fase 3 - Notificacoes e background
 
