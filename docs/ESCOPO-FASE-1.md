@@ -543,6 +543,11 @@ Escopo previsto restante:
   - artefato `https://expo.dev/artifacts/eas/oMAKKK1r6eqNqqjcgUcCW7.apk`;
   - APK baixado e validado como arquivo integro;
   - instalacao ADB nao executada porque nenhum dispositivo estava conectado/autorizado no momento da verificacao.
+  - analise visual dos videos confirmou pontos adicionais de UX:
+    - remover botao manual `Atualizar` da tela de chamada recebida;
+    - trocar feedback pos-encerramento para mensagem amigavel sem `Status: ANSWERED`;
+    - abrir tela cheia de `Chamando` imediatamente apos a RPC criar uma chamada, antes do proximo polling;
+    - manter popup para ocupado, pois ficou mais visivel no teste real.
 
 ### Fase 3 - Notificacoes e background
 

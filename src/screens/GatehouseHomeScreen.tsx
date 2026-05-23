@@ -51,7 +51,6 @@ export function GatehouseHomeScreen({ context, directoryUnits, user }: Gatehouse
       <IncomingCallExperience
         callerLabel={`${unitLabels.get(incomingCall.origin_unit_id ?? incomingCall.unit_id) ?? 'Unidade'} para Portaria`}
         onAnswer={() => handleAnswerGatehouseCall(incomingCall.call_id, user, unitLabels, setHistory, setPendingCalls, setFeedback)}
-        onRefresh={() => refreshGatehouseData(unitLabels, setHistory, setPendingCalls, setFeedback)}
         startedAt={formatDateTime(incomingCall.started_at)}
         targetLabel="Portaria"
       />
@@ -114,6 +113,7 @@ export function GatehouseHomeScreen({ context, directoryUnits, user }: Gatehouse
           {units.map((unit) => (
             <GatehouseUnitCard
               activeCallTarget={activeCallTarget}
+              activeDeviceId={activeDevice?.id ?? null}
               key={unit.id}
               setActiveCallTarget={setActiveCallTarget}
               setFeedback={setFeedback}
@@ -147,6 +147,7 @@ export function GatehouseHomeScreen({ context, directoryUnits, user }: Gatehouse
 
 function GatehouseUnitCard({
   activeCallTarget,
+  activeDeviceId,
   setActiveCallTarget,
   setFeedback,
   setHistory,
@@ -156,6 +157,7 @@ function GatehouseUnitCard({
   user,
 }: {
   activeCallTarget: string | null;
+  activeDeviceId: string | null;
   setActiveCallTarget: (target: string | null) => void;
   setFeedback: (message: string | null) => void;
   setHistory: (history: CallRecord[]) => void;
@@ -180,6 +182,7 @@ function GatehouseUnitCard({
               ? handleGatehouseToUnitCall(
                   unit.id,
                   unit.label,
+                  activeDeviceId,
                   user,
                   unitLabels,
                   setHistory,
@@ -242,6 +245,7 @@ async function refreshGatehouseData(
 async function handleGatehouseToUnitCall(
   unitId: string,
   unitLabel: string,
+  activeDeviceId: string | null,
   user: AuthenticatedUser,
   unitLabels: Map<string, string>,
   setHistory: (history: CallRecord[]) => void,
@@ -265,7 +269,16 @@ async function handleGatehouseToUnitCall(
       targetUnitId: unitId,
       user,
     });
-    setFeedback(`Chamada iniciada para ${unitLabel}. Status: ${call.status}.`);
+    setHistory([
+      buildOptimisticCall({
+        id: call.id,
+        originPortariaDeviceId: activeDeviceId,
+        status: 'RINGING',
+        toLabel: unitLabel,
+        unitId,
+      }),
+    ]);
+    setFeedback(null);
     await refreshGatehouseData(unitLabels, setHistory, setPendingCalls, setFeedback, { silent: true });
   } catch (err) {
     const message = getErrorMessage(err);
@@ -339,7 +352,7 @@ async function handleCancelCall(
       result: 'SUCCESS',
       user,
     });
-    setFeedback(`Chamada cancelada. Status: ${call.status}.`);
+    setFeedback('Chamada cancelada.');
     await refreshGatehouseData(unitLabels, setHistory, setPendingCalls, setFeedback);
   } catch (err) {
     const message = getErrorMessage(err);
@@ -371,7 +384,7 @@ async function handleEndCall(
       result: 'SUCCESS',
       user,
     });
-    setFeedback(`Chamada encerrada. Status: ${call.status}.`);
+    setFeedback('Chamada encerrada.');
     await refreshGatehouseData(unitLabels, setHistory, setPendingCalls, setFeedback);
   } catch (err) {
     const message = getErrorMessage(err);
@@ -379,6 +392,36 @@ async function handleEndCall(
     setFeedback(null);
     showInfo('Nao foi possivel encerrar', message);
   }
+}
+
+function buildOptimisticCall({
+  id,
+  originPortariaDeviceId,
+  status,
+  toLabel,
+  unitId,
+}: {
+  id: string;
+  originPortariaDeviceId: string | null;
+  status: CallRecord['status'];
+  toLabel: string;
+  unitId: string;
+}): CallRecord {
+  return {
+    direction: 'gatehouse_to_unit',
+    endedAt: null,
+    fromLabel: 'Portaria',
+    id,
+    originPortariaDeviceId,
+    originType: 'PORTARIA',
+    originUnitId: null,
+    startedAt: formatDateTime(new Date().toISOString()),
+    status,
+    targetPortariaDeviceId: null,
+    targetType: 'UNIT',
+    toLabel,
+    unitId,
+  };
 }
 
 function showInfo(title: string, message: string) {

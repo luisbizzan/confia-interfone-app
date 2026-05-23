@@ -60,7 +60,6 @@ export function ResidentHomeScreen({ context, directoryUnits, user }: ResidentHo
       <IncomingCallExperience
         callerLabel={pendingCallTitle(incomingCall, unitLabels)}
         onAnswer={() => handleAnswerResidentCall(incomingCall.call_id, user, unitLabels, setHistory, setPendingCalls, setFeedback)}
-        onRefresh={() => refreshResidentData(unitLabels, setHistory, setPendingCalls, setFeedback)}
         startedAt={formatDateTime(incomingCall.started_at)}
         targetLabel="Sua unidade"
       />
@@ -398,7 +397,19 @@ async function handleResidentToGatehouseCall(
       unitId,
       user,
     });
-    setFeedback(`Chamada iniciada para a portaria. Status: ${call.status}.`);
+    setHistory([
+      buildOptimisticCall({
+        id: call.id,
+        fromLabel: unitLabels.get(unitId) ?? 'Sua unidade',
+        originType: 'UNIT',
+        originUnitId: unitId,
+        status: 'RINGING',
+        targetType: 'PORTARIA',
+        toLabel: 'Portaria',
+        unitId,
+      }),
+    ]);
+    setFeedback(null);
     await refreshResidentData(unitLabels, setHistory, setPendingCalls, setFeedback, { silent: true });
   } catch (err) {
     const message = getErrorMessage(err);
@@ -471,7 +482,7 @@ async function handleCancelCall(
       result: 'SUCCESS',
       user,
     });
-    setFeedback(`Chamada cancelada. Status: ${call.status}.`);
+    setFeedback('Chamada cancelada.');
     await refreshResidentData(unitLabels, setHistory, setPendingCalls, setFeedback);
   } catch (err) {
     const message = getErrorMessage(err);
@@ -503,7 +514,7 @@ async function handleEndCall(
       result: 'SUCCESS',
       user,
     });
-    setFeedback(`Chamada encerrada. Status: ${call.status}.`);
+    setFeedback('Chamada encerrada.');
     await refreshResidentData(unitLabels, setHistory, setPendingCalls, setFeedback);
   } catch (err) {
     const message = getErrorMessage(err);
@@ -541,7 +552,19 @@ async function handleResidentToUnitCall(
       unitId: originUnitId,
       user,
     });
-    setFeedback(`Chamada iniciada para ${targetLabel}. Status: ${call.status}.`);
+    setHistory([
+      buildOptimisticCall({
+        id: call.id,
+        fromLabel: unitLabels.get(originUnitId) ?? 'Sua unidade',
+        originType: 'UNIT',
+        originUnitId,
+        status: 'RINGING',
+        targetType: 'UNIT',
+        toLabel: targetLabel,
+        unitId: targetUnitId,
+      }),
+    ]);
+    setFeedback(null);
     await refreshResidentData(unitLabels, setHistory, setPendingCalls, setFeedback, { silent: true });
   } catch (err) {
     const message = getErrorMessage(err);
@@ -560,6 +583,42 @@ async function handleResidentToUnitCall(
   } finally {
     setActiveCallTarget(null);
   }
+}
+
+function buildOptimisticCall({
+  fromLabel,
+  id,
+  originType,
+  originUnitId,
+  status,
+  targetType,
+  toLabel,
+  unitId,
+}: {
+  fromLabel: string;
+  id: string;
+  originType: 'PORTARIA' | 'UNIT';
+  originUnitId: string | null;
+  status: CallRecord['status'];
+  targetType: 'PORTARIA' | 'UNIT';
+  toLabel: string;
+  unitId: string;
+}): CallRecord {
+  return {
+    direction: originType === 'PORTARIA' ? 'gatehouse_to_unit' : targetType === 'PORTARIA' ? 'resident_to_gatehouse' : 'resident_to_unit',
+    endedAt: null,
+    fromLabel,
+    id,
+    originPortariaDeviceId: null,
+    originType,
+    originUnitId,
+    startedAt: formatDateTime(new Date().toISOString()),
+    status,
+    targetPortariaDeviceId: null,
+    targetType,
+    toLabel,
+    unitId,
+  };
 }
 
 function callStatusLabel(status: CallRecord['status']) {

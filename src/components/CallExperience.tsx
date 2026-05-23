@@ -11,7 +11,6 @@ import { VoiceJoinPanel } from './VoiceJoinPanel';
 type IncomingCallExperienceProps = {
   callerLabel: string;
   onAnswer: () => void;
-  onRefresh: () => void;
   startedAt: string;
   targetLabel: string;
 };
@@ -29,7 +28,6 @@ type ActiveCallExperienceProps = {
 export function IncomingCallExperience({
   callerLabel,
   onAnswer,
-  onRefresh,
   startedAt,
   targetLabel,
 }: IncomingCallExperienceProps) {
@@ -44,7 +42,6 @@ export function IncomingCallExperience({
     >
       <View style={styles.actionStack}>
         <PrimaryButton label="Atender" onPress={onAnswer} />
-        <PrimaryButton label="Atualizar" tone="neutral" onPress={onRefresh} />
       </View>
     </CallStage>
   );

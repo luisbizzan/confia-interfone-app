@@ -183,7 +183,6 @@ function AppContent() {
           <IncomingCallExperience
             callerLabel={pendingCallTitle(globalCallState.call, unitLabels, user.profile)}
             onAnswer={() => handleGlobalAnswer(user, context, unitLabels, setGlobalCallState, globalCallState.call)}
-            onRefresh={() => refreshGlobalCallState(user, context, unitLabels, setGlobalCallState)}
             startedAt={formatDateTime(globalCallState.call.started_at)}
             targetLabel={user.profile === 'gatehouse' ? 'Portaria' : 'Sua unidade'}
           />
