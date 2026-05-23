@@ -8,6 +8,7 @@ import { AppHomeScreen } from './src/screens/AppHomeScreen';
 import { LoginScreen } from './src/screens/LoginScreen';
 import { ResidentHomeScreen } from './src/screens/ResidentHomeScreen';
 import { GatehouseHomeScreen } from './src/screens/GatehouseHomeScreen';
+import { env } from './src/config/env';
 import { loadCurrentAuthState, signInWithEmail, signOut, type LoadedAuthState } from './src/services/auth';
 import { clearErrorReportingContext, registerGlobalErrorHandlers, reportAppError, setErrorReportingContext } from './src/services/error-reporting';
 import { theme } from './src/theme/theme';
@@ -25,6 +26,7 @@ function AppContent() {
   const [authState, setAuthState] = useState<LoadedAuthState>({ status: 'unauthenticated' });
   const [isBooting, setIsBooting] = useState(true);
   const [activeView, setActiveView] = useState<'home' | 'intercom' | 'settings'>('home');
+  const [shouldSimulateError, setShouldSimulateError] = useState(false);
 
   useEffect(() => {
     registerGlobalErrorHandlers();
@@ -121,7 +123,7 @@ function AppContent() {
         {activeView === 'home' ? (
           <AppHomeScreen context={context} onOpenIntercom={() => setActiveView('intercom')} user={user} />
         ) : null}
-        {activeView === 'settings' ? <SettingsView context={context} user={user} /> : null}
+        {activeView === 'settings' ? <SettingsView context={context} onSimulateError={() => setShouldSimulateError(true)} user={user} /> : null}
         {activeView === 'intercom' && intercomEnabled && user.profile === 'resident' ? (
           <ResidentHomeScreen context={context} directoryUnits={units} user={user} />
         ) : null}
@@ -153,6 +155,8 @@ function AppContent() {
           onPress={() => setActiveView('settings')}
         />
       </View>
+
+      {shouldSimulateError ? <ErrorSimulationTrigger /> : null}
     </SafeAreaView>
   );
 }
@@ -176,7 +180,7 @@ function NavigationButton({
   );
 }
 
-function SettingsView({ context, user }: { context: UserContext; user: AuthenticatedUser }) {
+function SettingsView({ context, onSimulateError, user }: { context: UserContext; onSimulateError: () => void; user: AuthenticatedUser }) {
   return (
     <View style={styles.settings}>
       <Text style={styles.settingsEyebrow}>Configuracoes</Text>
@@ -187,8 +191,21 @@ function SettingsView({ context, user }: { context: UserContext; user: Authentic
         <Text style={styles.settingLabel}>Recursos do condominio</Text>
         <Text style={styles.settingValue}>{context.features?.INTERCOM !== false ? 'Interfone habilitado' : 'Interfone indisponivel'}</Text>
       </View>
+      {env.enableErrorTest ? (
+        <View style={styles.dangerPanel}>
+          <Text style={styles.dangerPanelTitle}>Teste tecnico</Text>
+          <Text style={styles.dangerPanelText}>Simula uma excecao para validar o reporte automatico ao time tecnico.</Text>
+          <TouchableOpacity accessibilityRole="button" style={styles.simulateButton} testID="settings-simulate-error" onPress={onSimulateError}>
+            <Text style={styles.simulateButtonText}>Gerar erro de teste</Text>
+          </TouchableOpacity>
+        </View>
+      ) : null}
     </View>
   );
+}
+
+function ErrorSimulationTrigger(): never {
+  throw new Error('Confia simulated app error for reporting validation');
 }
 
 const styles = StyleSheet.create({
@@ -317,5 +334,36 @@ const styles = StyleSheet.create({
     color: theme.colors.text,
     fontSize: 16,
     fontWeight: '800',
+  },
+  dangerPanel: {
+    backgroundColor: '#fef2f2',
+    borderColor: '#fecaca',
+    borderRadius: theme.radius.md,
+    borderWidth: 1,
+    gap: theme.spacing.sm,
+    padding: theme.spacing.lg,
+  },
+  dangerPanelTitle: {
+    color: theme.colors.danger,
+    fontSize: 16,
+    fontWeight: '900',
+  },
+  dangerPanelText: {
+    color: '#7f1d1d',
+    fontSize: 14,
+    lineHeight: 20,
+  },
+  simulateButton: {
+    alignItems: 'center',
+    backgroundColor: theme.colors.danger,
+    borderRadius: theme.radius.sm,
+    marginTop: theme.spacing.sm,
+    paddingHorizontal: theme.spacing.lg,
+    paddingVertical: theme.spacing.md,
+  },
+  simulateButtonText: {
+    color: '#ffffff',
+    fontSize: 15,
+    fontWeight: '900',
   },
 });

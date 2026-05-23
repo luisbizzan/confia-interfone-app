@@ -432,6 +432,11 @@ Entregas iniciadas:
   - erros repetidos usam a mesma assinatura e reaproveitam a issue existente;
   - se o GitHub ainda nao estiver configurado, o relatorio fica salvo no Supabase e a resposta marca `github.status = skipped`;
   - o app mantem fallback de insert direto na tabela caso a Edge Function esteja indisponivel.
+- Simulador controlado de erro:
+  - adicionada flag `EXPO_PUBLIC_ENABLE_ERROR_TEST`;
+  - quando a flag vale `true`, a tela `Configuracoes` exibe o botao `Gerar erro de teste`;
+  - o botao provoca uma excecao de renderizacao controlada para validar o fluxo completo de reporte;
+  - a flag deve ficar `false` em builds de cliente/piloto externo.
 
 Regras de seguranca:
 
@@ -464,6 +469,7 @@ Escopo previsto restante:
 - Validar em device real a tela amigavel de erro e a gravacao em `app_error_reports`.
 - Configurar secrets `GITHUB_TOKEN` e `GITHUB_REPOSITORY` no Supabase para ativar criacao real de issues.
 - Validar deduplicacao criando duas ocorrencias do mesmo erro e conferindo que a issue e reaproveitada.
+- Para teste manual do simulador, iniciar o app com `EXPO_PUBLIC_ENABLE_ERROR_TEST=true`.
 
 ### Fase 3 - Notificacoes e background
 

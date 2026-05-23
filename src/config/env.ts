@@ -5,6 +5,7 @@ declare const process: {
 };
 
 type ExtraConfig = {
+  enableErrorTest?: string;
   supabaseUrl?: string;
   supabaseAnonKey?: string;
 };
@@ -20,6 +21,7 @@ function clean(value?: string) {
 }
 
 export const env = {
+  enableErrorTest: (clean(process.env?.EXPO_PUBLIC_ENABLE_ERROR_TEST) || clean(extra.enableErrorTest)) === 'true',
   supabaseUrl: clean(process.env?.EXPO_PUBLIC_SUPABASE_URL) || clean(extra.supabaseUrl),
   supabaseAnonKey: clean(process.env?.EXPO_PUBLIC_SUPABASE_ANON_KEY) || clean(extra.supabaseAnonKey),
 };

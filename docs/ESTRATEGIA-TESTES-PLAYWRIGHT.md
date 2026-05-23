@@ -224,6 +224,21 @@ Atualizacao apos observabilidade de erros - Fase 1:
   - validar que duas ocorrencias iguais reaproveitam a mesma issue e incrementam `occurrence_count`;
   - validar rate limit antes de liberar em piloto com muitos usuarios.
 
+Simulador de erro:
+
+- Rodar o app com `EXPO_PUBLIC_ENABLE_ERROR_TEST=true`.
+- Login com usuario operacional.
+- Abrir `Configuracoes`.
+- Clicar em `Gerar erro de teste`.
+- Validar que:
+  - aparece a tela amigavel `Tivemos um problema`;
+  - o stacktrace nao aparece para o usuario;
+  - `app_error_reports` recebe o registro;
+  - a Edge Function `report-app-error` retorna sucesso;
+  - com `GITHUB_TOKEN` configurado, uma issue e criada no repositorio configurado;
+  - ao repetir o mesmo teste, a assinatura e reaproveitada para deduplicacao.
+- Rodar tambem com `EXPO_PUBLIC_ENABLE_ERROR_TEST=false` e validar que o botao nao aparece.
+
 ## Estrutura sugerida
 
 Pode ser criado um novo projeto de testes, por exemplo:

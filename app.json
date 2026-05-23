@@ -43,6 +43,7 @@
       "favicon": "./assets/favicon.png"
     },
     "extra": {
+      "enableErrorTest": "$EXPO_PUBLIC_ENABLE_ERROR_TEST",
       "supabaseUrl": "$EXPO_PUBLIC_SUPABASE_URL",
       "supabaseAnonKey": "$EXPO_PUBLIC_SUPABASE_ANON_KEY",
       "eas": {
