@@ -538,6 +538,11 @@ Escopo previsto restante:
   - foi identificado vazamento de estado na UI quando o historico trazia chamadas do condominio que nao pertenciam ao perfil logado;
   - corrigido no app para considerar apenas chamadas relevantes ao morador ou ao dispositivo de portaria logado;
   - corrigido no backend para `get_my_call_history` retornar chamadas da unidade do morador ou do dispositivo de portaria, sem misturar chamadas internas de outros participantes.
+  - build EAS Android `b886f035-a84c-4a27-884c-ec2edf68826a`;
+  - commit embarcado `204de85 Scope active call state to logged user`;
+  - artefato `https://expo.dev/artifacts/eas/oMAKKK1r6eqNqqjcgUcCW7.apk`;
+  - APK baixado e validado como arquivo integro;
+  - instalacao ADB nao executada porque nenhum dispositivo estava conectado/autorizado no momento da verificacao.
 
 ### Fase 3 - Notificacoes e background
 

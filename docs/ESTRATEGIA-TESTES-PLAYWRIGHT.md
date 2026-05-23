@@ -630,3 +630,4 @@ A estrategia inicial sera considerada pronta quando conseguirmos rodar, de forma
 - Fluxo com 3 dispositivos deve validar que a portaria ocupada exibe popup de ocupacao para nova chamada recebida, sem alterar a chamada em andamento.
 - Fluxo com 3 dispositivos deve cruzar a UI com `app_call_diagnostics`: cada clique precisa gerar evento `STARTED` e terminar em `SUCCESS` ou `ERROR`.
 - Testes automatizados devem cobrir o filtro de historico: morador ve chamadas de suas unidades; portaria ve somente chamadas recebidas/iniciadas pelo seu dispositivo; chamadas de unidade para unidade nao devem aparecer como estado ativo da portaria.
+- Build de referencia para repetir o teste com 3 aparelhos: EAS Android `b886f035-a84c-4a27-884c-ec2edf68826a`, APK `https://expo.dev/artifacts/eas/oMAKKK1r6eqNqqjcgUcCW7.apk`.
