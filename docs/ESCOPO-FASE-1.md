@@ -532,6 +532,12 @@ Escopo previsto restante:
 - Validar deduplicacao criando duas ocorrencias do mesmo erro e conferindo que a issue e reaproveitada.
 - Para teste manual do simulador, iniciar o app com `EXPO_PUBLIC_ENABLE_ERROR_TEST=true`.
 - Validar em dois aparelhos que chamada recebida toca e abre a tela de atendimento quando o destinatario esta na Home ou em Configuracoes.
+- Validacao com 3 aparelhos em 23/05/2026:
+  - logs `app_call_diagnostics` confirmaram chamadas reais entre A-1, A-2 e portaria;
+  - bloqueios de destino ocupado retornaram corretamente pela RPC;
+  - foi identificado vazamento de estado na UI quando o historico trazia chamadas do condominio que nao pertenciam ao perfil logado;
+  - corrigido no app para considerar apenas chamadas relevantes ao morador ou ao dispositivo de portaria logado;
+  - corrigido no backend para `get_my_call_history` retornar chamadas da unidade do morador ou do dispositivo de portaria, sem misturar chamadas internas de outros participantes.
 
 ### Fase 3 - Notificacoes e background
 
@@ -571,3 +577,4 @@ Escopo previsto:
 - Para testar chamada entre moradores, e necessario cadastrar uma segunda unidade com morador ativo no backoffice.
 - O app ja bloqueia unidades sem morador ativo para receber chamadas.
 - O backoffice continua sendo responsavel por criar condominios, portaria, unidades e moradores.
+- A partir da validacao com 3 aparelhos, o estado visual de `RINGING`/`ANSWERED` precisa ser sempre derivado de chamadas em que o usuario logado participa; historico amplo do condominio fica restrito ao backoffice.

@@ -68,9 +68,15 @@ export type CallRecord = {
   direction: CallDirection;
   endedAt: string | null;
   fromLabel: string;
+  originPortariaDeviceId: string | null;
+  originType: 'PORTARIA' | 'UNIT';
+  originUnitId: string | null;
   toLabel: string;
   status: CallStatus;
   startedAt: string;
+  targetPortariaDeviceId: string | null;
+  targetType: 'PORTARIA' | 'UNIT';
+  unitId: string;
 };
 
 export type BackendCallRecord = {

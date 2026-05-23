@@ -626,3 +626,7 @@ A estrategia inicial sera considerada pronta quando conseguirmos rodar, de forma
 - APK Android `preview` passa pela abertura inicial sem tela nativa de feedback/crash.
 - APK Android `preview` abre login real sem aviso de Supabase nao configurado.
 - `expo config --type public` deve mostrar `extra.supabaseUrl` e `extra.supabaseAnonKey` resolvidos antes de gerar APK.
+- Fluxo com 3 dispositivos deve validar que uma chamada entre duas unidades nao muda a portaria para tela de `Chamando` ou `Em chamada`.
+- Fluxo com 3 dispositivos deve validar que a portaria ocupada exibe popup de ocupacao para nova chamada recebida, sem alterar a chamada em andamento.
+- Fluxo com 3 dispositivos deve cruzar a UI com `app_call_diagnostics`: cada clique precisa gerar evento `STARTED` e terminar em `SUCCESS` ou `ERROR`.
+- Testes automatizados devem cobrir o filtro de historico: morador ve chamadas de suas unidades; portaria ve somente chamadas recebidas/iniciadas pelo seu dispositivo; chamadas de unidade para unidade nao devem aparecer como estado ativo da portaria.

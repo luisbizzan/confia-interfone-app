@@ -7,6 +7,7 @@ import { PhoneActionButton } from '../components/PhoneActionButton';
 import { PrimaryButton } from '../components/PrimaryButton';
 import { demoUnits } from '../data/demo-data';
 import { answerGatehouseCall, cancelCall, endCall, getMyCallHistory, getMyPendingCalls, startGatehouseToUnitCall } from '../services/calls';
+import { isCallRelevantToGatehouse, isOutgoingGatehouseCall } from '../services/call-ownership';
 import { getErrorMessage, logCallDiagnostic } from '../services/diagnostics';
 import { theme } from '../theme/theme';
 import type { AuthenticatedUser, BackendCallRecord, CallRecord, PendingPortariaCall, UnitDirectoryItem, UserContext } from '../types/domain';
@@ -40,8 +41,9 @@ export function GatehouseHomeScreen({ context, directoryUnits, user }: Gatehouse
     return () => clearInterval(interval);
   }, [unitLabels]);
 
-  const activeCall = history.find((call) => call.status === 'ANSWERED' && !call.endedAt);
-  const outgoingCall = history.find((call) => call.status === 'RINGING' && !call.endedAt);
+  const relevantHistory = history.filter((call) => isCallRelevantToGatehouse(call, context));
+  const activeCall = relevantHistory.find((call) => call.status === 'ANSWERED' && !call.endedAt);
+  const outgoingCall = relevantHistory.find((call) => call.status === 'RINGING' && !call.endedAt && isOutgoingGatehouseCall(call, context));
   const incomingCall = pendingCalls[0];
 
   if (incomingCall) {
@@ -134,7 +136,7 @@ export function GatehouseHomeScreen({ context, directoryUnits, user }: Gatehouse
         />
         {showHistory ? (
           <CallHistory
-            calls={history}
+            calls={relevantHistory}
             onCancel={(callId) => handleCancelCall(callId, user, unitLabels, setHistory, setPendingCalls, setFeedback)}
           />
         ) : null}
@@ -433,9 +435,15 @@ function mapBackendCall(call: BackendCallRecord, unitLabels: Map<string, string>
           : 'resident_to_unit',
     endedAt: call.ended_at,
     fromLabel: call.origin_type === 'PORTARIA' ? 'Portaria' : originUnit,
+    originPortariaDeviceId: call.origin_portaria_device_id,
+    originType: call.origin_type,
+    originUnitId: call.origin_unit_id,
     toLabel: call.target_type === 'PORTARIA' ? 'Portaria' : targetUnit,
     status: call.status,
     startedAt: formatDateTime(call.started_at),
+    targetPortariaDeviceId: call.target_portaria_device_id,
+    targetType: call.target_type,
+    unitId: call.unit_id,
   };
 }
 

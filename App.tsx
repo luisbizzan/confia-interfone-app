@@ -11,6 +11,12 @@ import { ResidentHomeScreen } from './src/screens/ResidentHomeScreen';
 import { GatehouseHomeScreen } from './src/screens/GatehouseHomeScreen';
 import { env } from './src/config/env';
 import { answerGatehouseCall, answerResidentCall, cancelCall, endCall, getMyCallHistory, getMyPendingCalls } from './src/services/calls';
+import {
+  isCallRelevantToGatehouse,
+  isCallRelevantToResident,
+  isOutgoingGatehouseCall,
+  isOutgoingResidentCall,
+} from './src/services/call-ownership';
 import { loadCurrentAuthState, signInWithEmail, signOut, type LoadedAuthState } from './src/services/auth';
 import { clearErrorReportingContext, registerGlobalErrorHandlers, reportAppError, setErrorReportingContext } from './src/services/error-reporting';
 import { theme } from './src/theme/theme';
@@ -112,7 +118,7 @@ function AppContent() {
 
     const refresh = async (options?: { silent?: boolean }) => {
       try {
-        const nextState = await loadGlobalCallState(authenticatedState.user, unitLabels);
+        const nextState = await loadGlobalCallState(authenticatedState.user, authenticatedState.context, unitLabels);
 
         if (mounted) {
           setGlobalCallState(nextState);
@@ -176,8 +182,8 @@ function AppContent() {
         {globalCallState.status === 'incoming' ? (
           <IncomingCallExperience
             callerLabel={pendingCallTitle(globalCallState.call, unitLabels, user.profile)}
-            onAnswer={() => handleGlobalAnswer(user, unitLabels, setGlobalCallState, globalCallState.call)}
-            onRefresh={() => refreshGlobalCallState(user, unitLabels, setGlobalCallState)}
+            onAnswer={() => handleGlobalAnswer(user, context, unitLabels, setGlobalCallState, globalCallState.call)}
+            onRefresh={() => refreshGlobalCallState(user, context, unitLabels, setGlobalCallState)}
             startedAt={formatDateTime(globalCallState.call.started_at)}
             targetLabel={user.profile === 'gatehouse' ? 'Portaria' : 'Sua unidade'}
           />
@@ -185,13 +191,13 @@ function AppContent() {
         {globalCallState.status === 'active' ? (
           <ActiveCallExperience
             call={globalCallState.call}
-            onEnd={() => handleGlobalEnd(user, unitLabels, setGlobalCallState, globalCallState.call.id)}
+            onEnd={() => handleGlobalEnd(user, context, unitLabels, setGlobalCallState, globalCallState.call.id)}
           />
         ) : null}
         {globalCallState.status === 'outgoing' ? (
           <OutgoingCallExperience
             call={globalCallState.call}
-            onCancel={() => handleGlobalCancel(user, unitLabels, setGlobalCallState, globalCallState.call.id)}
+            onCancel={() => handleGlobalCancel(user, context, unitLabels, setGlobalCallState, globalCallState.call.id)}
           />
         ) : null}
         {globalCallState.status !== 'idle' && globalCallState.feedback ? (
@@ -308,12 +314,19 @@ function formatUnitLabel(unit: UserContext['unit_members'][number]['unit']) {
   return [unit.block, unit.number].filter(Boolean).join(' - ');
 }
 
-async function loadGlobalCallState(user: AuthenticatedUser, unitLabels: Map<string, string>): Promise<GlobalCallState> {
+async function loadGlobalCallState(user: AuthenticatedUser, context: UserContext, unitLabels: Map<string, string>): Promise<GlobalCallState> {
   const [pendingCalls, history] = await Promise.all([getMyPendingCalls(), getMyCallHistory()]);
   const incomingCall = user.profile === 'gatehouse' ? pendingCalls.portaria_calls?.[0] : pendingCalls.unit_calls?.[0];
-  const calls = history.map((call) => mapBackendCall(call, unitLabels));
+  const calls = history
+    .map((call) => mapBackendCall(call, unitLabels))
+    .filter((call) => (user.profile === 'gatehouse' ? isCallRelevantToGatehouse(call, context) : isCallRelevantToResident(call, context)));
   const activeCall = calls.find((call) => call.status === 'ANSWERED' && !call.endedAt);
-  const outgoingCall = calls.find((call) => call.status === 'RINGING' && !call.endedAt);
+  const outgoingCall = calls.find(
+    (call) =>
+      call.status === 'RINGING' &&
+      !call.endedAt &&
+      (user.profile === 'gatehouse' ? isOutgoingGatehouseCall(call, context) : isOutgoingResidentCall(call, context)),
+  );
 
   if (incomingCall) {
     return { status: 'incoming', call: incomingCall };
@@ -332,11 +345,12 @@ async function loadGlobalCallState(user: AuthenticatedUser, unitLabels: Map<stri
 
 async function refreshGlobalCallState(
   user: AuthenticatedUser,
+  context: UserContext,
   unitLabels: Map<string, string>,
   setGlobalCallState: (state: GlobalCallState) => void,
 ) {
   try {
-    setGlobalCallState(await loadGlobalCallState(user, unitLabels));
+    setGlobalCallState(await loadGlobalCallState(user, context, unitLabels));
   } catch (error) {
     setGlobalCallState({
       status: 'idle',
@@ -347,6 +361,7 @@ async function refreshGlobalCallState(
 
 async function handleGlobalAnswer(
   user: AuthenticatedUser,
+  context: UserContext,
   unitLabels: Map<string, string>,
   setGlobalCallState: (state: GlobalCallState) => void,
   call: PendingUnitCall | PendingPortariaCall,
@@ -358,7 +373,7 @@ async function handleGlobalAnswer(
       await answerResidentCall(call.call_id, user.id);
     }
 
-    await refreshGlobalCallState(user, unitLabels, setGlobalCallState);
+    await refreshGlobalCallState(user, context, unitLabels, setGlobalCallState);
   } catch (error) {
     setGlobalCallState({
       status: 'incoming',
@@ -370,13 +385,14 @@ async function handleGlobalAnswer(
 
 async function handleGlobalCancel(
   user: AuthenticatedUser,
+  context: UserContext,
   unitLabels: Map<string, string>,
   setGlobalCallState: (state: GlobalCallState) => void,
   callId: string,
 ) {
   try {
     await cancelCall(callId);
-    await refreshGlobalCallState(user, unitLabels, setGlobalCallState);
+    await refreshGlobalCallState(user, context, unitLabels, setGlobalCallState);
   } catch (error) {
     setGlobalCallState({
       status: 'idle',
@@ -387,13 +403,14 @@ async function handleGlobalCancel(
 
 async function handleGlobalEnd(
   user: AuthenticatedUser,
+  context: UserContext,
   unitLabels: Map<string, string>,
   setGlobalCallState: (state: GlobalCallState) => void,
   callId: string,
 ) {
   try {
     await endCall(callId);
-    await refreshGlobalCallState(user, unitLabels, setGlobalCallState);
+    await refreshGlobalCallState(user, context, unitLabels, setGlobalCallState);
   } catch (error) {
     setGlobalCallState({
       status: 'idle',
@@ -416,9 +433,15 @@ function mapBackendCall(call: BackendCallRecord, unitLabels: Map<string, string>
           : 'resident_to_unit',
     endedAt: call.ended_at,
     fromLabel: call.origin_type === 'PORTARIA' ? 'Portaria' : originUnit,
+    originPortariaDeviceId: call.origin_portaria_device_id,
+    originType: call.origin_type,
+    originUnitId: call.origin_unit_id,
     toLabel: call.target_type === 'PORTARIA' ? 'Portaria' : targetUnit,
     status: call.status,
     startedAt: formatDateTime(call.started_at),
+    targetPortariaDeviceId: call.target_portaria_device_id,
+    targetType: call.target_type,
+    unitId: call.unit_id,
   };
 }
 
