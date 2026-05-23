@@ -548,6 +548,10 @@ Escopo previsto restante:
     - trocar feedback pos-encerramento para mensagem amigavel sem `Status: ANSWERED`;
     - abrir tela cheia de `Chamando` imediatamente apos a RPC criar uma chamada, antes do proximo polling;
     - manter popup para ocupado, pois ficou mais visivel no teste real.
+  - build EAS Android com refinamentos dos videos `dd8556ac-bed0-4778-abf8-1b49547bb562`;
+  - commit embarcado `14c1f94 Refine call UX from device videos`;
+  - artefato `https://expo.dev/artifacts/eas/tmxZSDx6kN4WCcQPsaZC4L.apk`;
+  - APK baixado e validado como arquivo integro.
 
 ### Fase 3 - Notificacoes e background
 

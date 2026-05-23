@@ -634,3 +634,4 @@ A estrategia inicial sera considerada pronta quando conseguirmos rodar, de forma
 - Validar que tela de chamada recebida nao exibe botao `Atualizar`; a atualizacao deve ocorrer por polling/estado.
 - Validar que apos clicar em chamar portaria/unidade o app muda imediatamente para tela cheia de `Chamando`.
 - Validar que encerramento de chamada nao mostra `Status: ANSWERED` ao usuario.
+- Build de referencia com refinamentos dos videos: EAS Android `dd8556ac-bed0-4778-abf8-1b49547bb562`, APK `https://expo.dev/artifacts/eas/tmxZSDx6kN4WCcQPsaZC4L.apk`.
