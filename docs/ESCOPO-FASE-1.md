@@ -584,13 +584,41 @@ Estrategia definida:
 
 Objetivo: permitir chamadas recebidas com app em segundo plano.
 
-Escopo previsto:
+Implementado em 23/05/2026:
 
-- Push notifications.
-- `expo-notifications` com Expo Push Service como barramento inicial unico para Android e iOS.
-- Armazenamento de `ExpoPushToken` por usuario/dispositivo no Supabase.
-- Envio de push pelo backend quando uma chamada for criada ou quando novas funcionalidades precisarem avisar o usuario.
-- Firebase Cloud Messaging para Android e Apple Push Notification service para iOS ficam encapsulados pelo Expo Push Service na primeira versao.
+- Dependencias nativas:
+  - `expo-notifications`;
+  - `expo-device`.
+- App solicita permissao de notificacao em aparelho fisico depois do login.
+- App cria o canal Android `incoming-calls` com som, vibracao e prioridade alta.
+- App registra o `ExpoPushToken` no Supabase via RPC `register_app_push_token`.
+- Logout desativa o token atual via RPC `unregister_app_push_token`.
+- Quando o usuario toca numa notificacao de chamada, o app abre a area de Interfone.
+- Ao criar uma chamada, o app aciona a Edge Function `send-call-notification` em modo best effort.
+- Backend guarda tokens em `app_push_tokens`.
+- Edge Function `send-call-notification` localiza destinatarios por chamada:
+  - chamada para portaria: usuario do `target_portaria_device_id`;
+  - chamada para unidade: morador da tentativa atual em `call_attempts`;
+  - o usuario iniciador nao recebe a propria notificacao.
+- Bundle Android validado com `expo export --platform android`.
+
+Pendencias de conta/build:
+
+- Para APK/loja receber push real, o projeto Expo/EAS precisa ter credenciais de push configuradas:
+  - Android: FCM V1;
+  - iOS: APNs.
+- EAS Free atingiu o limite mensal; novo build em nuvem fica bloqueado ate o reset informado para 01/06/2026.
+- Build local Android foi configurado no Windows com Android SDK, NDK, CMake e JDK 17 portatil.
+- APK local gerado com sucesso:
+  - caminho: `C:\Projetos\Confia\apks\confia-interfone-push-local-20260523.apk`;
+  - origem: `android\app\build\outputs\apk\release\app-release.apk`;
+  - tamanho aproximado: 142 MB.
+- Tentativa de instalar via ADB nao encontrou aparelho conectado/autorizado no momento do build; o APK ficou disponivel para instalacao manual.
+
+Escopo ainda previsto:
+
+- Validar recebimento real de push em aparelho fisico com APK novo.
+- Tratar receipts do Expo Push Service para desativar tokens invalidos automaticamente.
 - Avaliar CallKit no iOS.
 - Avaliar ConnectionService no Android.
 - Beta fechado/TestFlight/internal testing.

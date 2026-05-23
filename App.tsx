@@ -20,6 +20,7 @@ import {
 } from './src/services/call-ownership';
 import { loadCurrentAuthState, signInWithEmail, signOut, type LoadedAuthState } from './src/services/auth';
 import { clearErrorReportingContext, registerGlobalErrorHandlers, reportAppError, setErrorReportingContext } from './src/services/error-reporting';
+import { addNotificationResponseListener, registerForPushNotifications, unregisterPushToken } from './src/services/push-notifications';
 import { theme } from './src/theme/theme';
 import type { AuthenticatedUser, BackendCallRecord, CallRecord, PendingPortariaCall, PendingUnitCall, UnitDirectoryItem, UserContext } from './src/types/domain';
 
@@ -45,6 +46,7 @@ function AppContent() {
   const [activeView, setActiveView] = useState<'home' | 'intercom' | 'settings'>('home');
   const [shouldSimulateError, setShouldSimulateError] = useState(false);
   const [globalCallState, setGlobalCallState] = useState<GlobalCallState>({ status: 'idle' });
+  const [pushToken, setPushToken] = useState<string | null>(null);
 
   useEffect(() => {
     registerGlobalErrorHandlers();
@@ -61,6 +63,34 @@ function AppContent() {
 
     clearErrorReportingContext();
   }, [activeView, authState]);
+
+  useEffect(() => {
+    if (authState.status !== 'authenticated') {
+      setPushToken(null);
+      return undefined;
+    }
+
+    let mounted = true;
+
+    registerForPushNotifications(authState.user)
+      .then((token) => {
+        if (mounted) {
+          setPushToken(token);
+        }
+      })
+      .catch((error) => {
+        void reportAppError(error, { source: 'push-registration' });
+      });
+
+    const subscription = addNotificationResponseListener(() => {
+      setActiveView('intercom');
+    });
+
+    return () => {
+      mounted = false;
+      subscription.remove();
+    };
+  }, [authState]);
 
   useEffect(() => {
     let mounted = true;
@@ -95,10 +125,12 @@ function AppContent() {
   }
 
   async function handleLogout() {
+    await unregisterPushToken(pushToken);
     await signOut();
     setAuthState({ status: 'unauthenticated' });
     setActiveView('home');
     setGlobalCallState({ status: 'idle' });
+    setPushToken(null);
   }
 
   const authenticatedState = authState.status === 'authenticated' ? authState : null;

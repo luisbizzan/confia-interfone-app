@@ -643,3 +643,16 @@ A estrategia inicial sera considerada pronta quando conseguirmos rodar, de forma
 - Validar futuramente politica de versao minima antes de liberar piloto externo.
 - Build de referencia com disponibilidade/diagnostico/versionamento: EAS Android `4ac99f56-0865-4ecb-87ca-1d0715d66254`, APK `https://expo.dev/artifacts/eas/aeCQUFg9bR5Zh9723Ftutw.apk`.
 - Validar no proximo build, apos liberar cota EAS ou build local, que Configuracoes mostra `1.0.1 (8)`.
+- Build local Android gerado para contornar limite do EAS Free:
+  - APK: `C:\Projetos\Confia\apks\confia-interfone-push-local-20260523.apk`;
+  - comandos validados: `expo prebuild --platform android --clean --no-install`, `gradlew assembleDebug`, `gradlew assembleRelease`;
+  - instalacao via ADB ficou pendente porque nenhum device estava visivel/autorizado no momento da tentativa.
+- Validar que login em aparelho fisico solicita permissao de notificacao e grava token em `app_push_tokens`.
+- Validar que logout desativa o token em `app_push_tokens`.
+- Validar que chamada morador -> portaria chama `send-call-notification` e envia push para o usuario da portaria.
+- Validar que chamada portaria -> unidade chama `send-call-notification` e envia push para o morador da tentativa atual.
+- Validar que chamada unidade -> unidade envia push apenas para a unidade de destino.
+- Validar que tocar na notificacao abre o app na area de Interfone.
+- Validar que o iniciador da chamada nao recebe a propria notificacao.
+- Validar que, sem token cadastrado, a Edge Function retorna `skipped: true` e nao quebra o fluxo da chamada.
+- Validar que APK/loja possui credenciais FCM/APNs antes de considerar push em segundo plano pronto para apresentacao.
