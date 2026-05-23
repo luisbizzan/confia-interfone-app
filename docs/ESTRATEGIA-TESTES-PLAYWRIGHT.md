@@ -636,3 +636,4 @@ A estrategia inicial sera considerada pronta quando conseguirmos rodar, de forma
 - Validar que encerramento de chamada nao mostra `Status: ANSWERED` ao usuario.
 - Build de referencia com refinamentos dos videos: EAS Android `dd8556ac-bed0-4778-abf8-1b49547bb562`, APK `https://expo.dev/artifacts/eas/tmxZSDx6kN4WCcQPsaZC4L.apk`.
 - Validar em aparelho fisico que o login se ajusta ao teclado, o botao `Entrar` continua acessivel e o submit pela tecla `done` funciona.
+- Build de referencia com login ajustado: EAS Android `842568a1-3395-4ffe-a8bc-f449de4eea2b`, APK `https://expo.dev/artifacts/eas/hjrDdR8wRD6rTahzeMST9P.apk`.

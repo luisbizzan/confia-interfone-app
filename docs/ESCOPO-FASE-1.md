@@ -554,6 +554,11 @@ Escopo previsto restante:
   - artefato `https://expo.dev/artifacts/eas/tmxZSDx6kN4WCcQPsaZC4L.apk`;
   - APK baixado e validado como arquivo integro.
   - login ajustado com `KeyboardAvoidingView`, scroll e envio pelo teclado para melhorar uso em aparelhos Android/iOS.
+  - build EAS Android com login ajustado `842568a1-3395-4ffe-a8bc-f449de4eea2b`;
+  - commit embarcado `f7ec26c Improve login keyboard handling`;
+  - artefato `https://expo.dev/artifacts/eas/hjrDdR8wRD6rTahzeMST9P.apk`;
+  - APK baixado e validado como arquivo integro;
+  - instalacao ADB nao executada porque nenhum dispositivo apareceu em `adb devices`.
 
 ### Fase 3 - Notificacoes e background
 
