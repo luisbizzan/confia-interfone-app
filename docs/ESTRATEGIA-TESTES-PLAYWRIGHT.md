@@ -513,6 +513,7 @@ Fases de CI:
 - Push notification e background exigirao teste nativo.
 - Build Android `preview` deve ser validado antes de demonstracoes, pois ele usa Hermes/release bundle e pode revelar erros que nao aparecem no Metro.
 - O pacote `@supabase/supabase-js` esta fixo em `2.86.0` por compatibilidade com Hermes; upgrades futuros precisam rodar `expo export --platform android` antes de gerar APK.
+- Dependencias nativas Expo devem ser conferidas com `npm ls expo-asset expo-font expo-constants expo-modules-core`, pois peer dependency de modulo nativo pode instalar versao de outro SDK e causar crash antes do app iniciar.
 
 ## Recomendacao de implementacao
 
@@ -530,6 +531,7 @@ Ordem sugerida:
 10. Evoluir suite completa em ambiente de homologacao.
 11. Antes de apresentar para cliente, rodar validacao nativa manual com APK `preview` instalado.
 12. Em cada upgrade de SDK/dependencia, rodar export Android e smoke web.
+13. Depois de instalar novo APK no Android, abrir o app uma vez antes dos testes funcionais para confirmar que nao ha crash nativo de bootstrap.
 
 ## Criterio de sucesso
 
@@ -547,3 +549,4 @@ A estrategia inicial sera considerada pronta quando conseguirmos rodar, de forma
 - bloqueio visual de unidade sem morador ativo;
 - validacao de historico.
 - APK Android `preview` abre sem depender de Metro/QR local.
+- APK Android `preview` passa pela abertura inicial sem tela nativa de feedback/crash.

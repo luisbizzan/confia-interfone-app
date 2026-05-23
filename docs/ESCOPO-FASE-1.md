@@ -443,6 +443,12 @@ Entregas iniciadas:
   - primeira build `preview` falhou no Hermes por incompatibilidade do `@supabase/supabase-js@2.106.0` com `import(/* webpackIgnore */ ...)` de tracing/OpenTelemetry;
   - dependencia `@supabase/supabase-js` foi travada em `2.86.0`, mantendo Auth, RPC e Edge Functions sem o trecho de tracing problematico;
   - export Android local com Hermes passou depois da correcao.
+- Correcao de crash nativo no APK `preview`:
+  - primeiro APK preview instalou, mas abriu a tela nativa de feedback com `NoClassDefFoundError: expo.modules.kotlin.types.AnyTypeCache`;
+  - causa identificada: `expo-audio` estava resolvendo peer dependencies para `expo-asset@56.x` e `expo-constants@56.x`, incompatíveis com Expo SDK 54;
+  - `expo-asset` e `expo-font` foram adicionados explicitamente na versao compativel com SDK 54;
+  - arvore nativa passou a ficar alinhada em `expo-asset@12.0.13`, `expo-font@14.0.11`, `expo-constants@18.0.13` e `expo-modules-core@3.0.30`;
+  - `expo install --check`, `tsc --noEmit` e `expo export --platform android` passaram depois da correcao.
 
 Regras de seguranca:
 

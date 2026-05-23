@@ -54,7 +54,9 @@
       "expo-secure-store",
       "@livekit/react-native-expo-plugin",
       "@config-plugins/react-native-webrtc",
-      "expo-audio"
+      "expo-audio",
+      "expo-asset",
+      "expo-font"
     ],
     "owner": "luisbizzan"
   }
