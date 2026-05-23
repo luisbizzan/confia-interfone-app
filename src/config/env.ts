@@ -21,7 +21,7 @@ function clean(value?: string) {
 }
 
 export const env = {
-  enableErrorTest: (clean(process.env?.EXPO_PUBLIC_ENABLE_ERROR_TEST) || clean(extra.enableErrorTest)) === 'true',
-  supabaseUrl: clean(process.env?.EXPO_PUBLIC_SUPABASE_URL) || clean(extra.supabaseUrl),
-  supabaseAnonKey: clean(process.env?.EXPO_PUBLIC_SUPABASE_ANON_KEY) || clean(extra.supabaseAnonKey),
+  enableErrorTest: (clean(extra.enableErrorTest) || clean(process.env?.EXPO_PUBLIC_ENABLE_ERROR_TEST)) === 'true',
+  supabaseUrl: clean(extra.supabaseUrl) || clean(process.env?.EXPO_PUBLIC_SUPABASE_URL),
+  supabaseAnonKey: clean(extra.supabaseAnonKey) || clean(process.env?.EXPO_PUBLIC_SUPABASE_ANON_KEY),
 };

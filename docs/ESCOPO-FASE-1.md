@@ -454,6 +454,11 @@ Entregas iniciadas:
   - variaveis `EXPO_PUBLIC_SUPABASE_URL` e `EXPO_PUBLIC_SUPABASE_ANON_KEY` existiam no ambiente `preview` do EAS;
   - causa identificada: o perfil `preview` do `eas.json` nao declarava `environment = preview`;
   - perfil `preview` passou a carregar explicitamente o ambiente `preview` para injetar as variaveis publicas no bundle.
+- Correcao complementar de injecao de ambiente:
+  - `app.json` nao expande valores no formato `$EXPO_PUBLIC_*` dentro de `extra`;
+  - criado `app.config.js` para ler `process.env` durante o build e gravar valores reais em `extra`;
+  - `env.ts` passou a priorizar `Constants.expoConfig.extra`, mantendo `process.env` apenas como fallback;
+  - `expo config --type public` confirmou `supabaseUrl`, `supabaseAnonKey` e `enableErrorTest` resolvidos antes do build.
 
 Regras de seguranca:
 
