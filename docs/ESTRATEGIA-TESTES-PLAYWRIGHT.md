@@ -511,6 +511,8 @@ Fases de CI:
 - Fluxos com chamadas dependem de estado e podem falhar se houver chamadas antigas tocando.
 - Quando entrar voz real, Playwright nao sera suficiente para validar audio nativo.
 - Push notification e background exigirao teste nativo.
+- Build Android `preview` deve ser validado antes de demonstracoes, pois ele usa Hermes/release bundle e pode revelar erros que nao aparecem no Metro.
+- O pacote `@supabase/supabase-js` esta fixo em `2.86.0` por compatibilidade com Hermes; upgrades futuros precisam rodar `expo export --platform android` antes de gerar APK.
 
 ## Recomendacao de implementacao
 
@@ -526,6 +528,8 @@ Ordem sugerida:
 8. Automatizar fluxo morador -> unidade.
 9. Levar smoke tests para GitHub Actions.
 10. Evoluir suite completa em ambiente de homologacao.
+11. Antes de apresentar para cliente, rodar validacao nativa manual com APK `preview` instalado.
+12. Em cada upgrade de SDK/dependencia, rodar export Android e smoke web.
 
 ## Criterio de sucesso
 
@@ -542,3 +546,4 @@ A estrategia inicial sera considerada pronta quando conseguirmos rodar, de forma
 - atualizacao automatica entre duas sessoes abertas;
 - bloqueio visual de unidade sem morador ativo;
 - validacao de historico.
+- APK Android `preview` abre sem depender de Metro/QR local.

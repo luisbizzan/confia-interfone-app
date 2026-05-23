@@ -437,6 +437,12 @@ Entregas iniciadas:
   - quando a flag vale `true`, a tela `Configuracoes` exibe o botao `Gerar erro de teste`;
   - o botao provoca uma excecao de renderizacao controlada para validar o fluxo completo de reporte;
   - a flag deve ficar `false` em builds de cliente/piloto externo.
+- Preparacao de APK independente do Metro:
+  - identificado que o APK `development` exige Metro ativo e QR apontando para a maquina local;
+  - criado ambiente `preview` no EAS com `EXPO_PUBLIC_SUPABASE_URL`, `EXPO_PUBLIC_SUPABASE_ANON_KEY` e `EXPO_PUBLIC_ENABLE_ERROR_TEST=true`;
+  - primeira build `preview` falhou no Hermes por incompatibilidade do `@supabase/supabase-js@2.106.0` com `import(/* webpackIgnore */ ...)` de tracing/OpenTelemetry;
+  - dependencia `@supabase/supabase-js` foi travada em `2.86.0`, mantendo Auth, RPC e Edge Functions sem o trecho de tracing problematico;
+  - export Android local com Hermes passou depois da correcao.
 
 Regras de seguranca:
 
@@ -451,6 +457,8 @@ Observacao tecnica:
 - LiveKit em Expo exige development build com `expo-dev-client`.
 - Expo Go nao suporta os modulos nativos de WebRTC exigidos pelo LiveKit.
 - A visualizacao web continua util para login, chamadas, atendimento e validacao de token.
+- Builds `development` servem para depurar com Metro/QR; builds `preview` geram APK instalavel que abre sem depender do servidor local.
+- A dependencia `@supabase/supabase-js` deve permanecer fixa em `2.86.0` ate validarmos uma versao mais nova compativel com Hermes.
 
 Escopo previsto restante:
 
@@ -464,7 +472,7 @@ Escopo previsto restante:
   - evoluir feedback de reconexao/erro sem expor detalhes tecnicos.
 - Validar roteamento de audio nativo com prioridade para o fone do aparelho no uso comum.
 - Evoluir UX de reconexao/erro depois do primeiro teste nativo.
-- Gerar novo APK/development build depois da inclusao de `expo-audio`, pois o toque nativo nao entra apenas com reload do Metro.
+- Gerar novo APK `preview` depois da correcao do Supabase JS para testar sem Metro/QR.
 - Testar recurso `INTERCOM = false` em um condominio novo para validar home sem atalho de interfone.
 - Validar em device real a tela amigavel de erro e a gravacao em `app_error_reports`.
 - Configurar secrets `GITHUB_TOKEN` e `GITHUB_REPOSITORY` no Supabase para ativar criacao real de issues.
