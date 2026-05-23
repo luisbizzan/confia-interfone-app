@@ -252,6 +252,11 @@ Atualizacao apos regra de ocupacao no backend:
   - validar que erros de portaria/unidade ocupada aparecem em popup com botao `OK`;
   - validar que a mensagem de erro fica associada a acao executada e nao aparece em card errado;
   - no roteiro manual, anotar horario aproximado e aparelho usado para cruzar com `created_at`, `user_email`, `action` e `error_message`.
+- APK de referencia com diagnosticos:
+  - EAS build Android `78bd6c9f-1f1b-4a3f-911f-06dba4f903c3`;
+  - commit `79c74d6 Add call diagnostics and popup errors`;
+  - artefato `https://expo.dev/artifacts/eas/fUKuVBm5TsRJTFGVYEpysF.apk`;
+  - validar em tres celulares e depois consultar `app_call_diagnostics` por horario aproximado.
 
 Estrategia de push notifications:
 

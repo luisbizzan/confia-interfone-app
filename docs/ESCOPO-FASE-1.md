@@ -490,6 +490,12 @@ Entregas iniciadas:
   - eventos incluem usuario, perfil, condominio, plataforma, acao, `call_id`, unidades envolvidas, duracao da RPC e mensagem de erro;
   - falhas de chamada passam a aparecer em popup com botao `OK`, deixando bloqueios de portaria/unidade ocupada mais visiveis;
   - feedback inline de erro deixa de poluir cards incorretos, como a mensagem de chamada para unidade aparecendo dentro do card da portaria.
+- APK preview com diagnosticos e popups:
+  - build EAS Android `78bd6c9f-1f1b-4a3f-911f-06dba4f903c3`;
+  - commit embarcado `79c74d6 Add call diagnostics and popup errors`;
+  - artefato `https://expo.dev/artifacts/eas/fUKuVBm5TsRJTFGVYEpysF.apk`;
+  - APK baixado e validado como arquivo integro;
+  - instalacao ADB ficou pendente porque nenhum dispositivo estava conectado/autorizado no momento da instalacao.
 
 Regras de seguranca:
 
