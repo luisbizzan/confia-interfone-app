@@ -1,5 +1,6 @@
 import { StatusBar } from 'expo-status-bar';
 import { MaterialIcons } from '@expo/vector-icons';
+import Constants from 'expo-constants';
 import { useEffect, useMemo, useState } from 'react';
 import { ActivityIndicator, Platform, SafeAreaView, ScrollView, StatusBar as NativeStatusBar, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 
@@ -272,6 +273,9 @@ function NavigationButton({
 }
 
 function SettingsView({ context, onSimulateError, user }: { context: UserContext; onSimulateError: () => void; user: AuthenticatedUser }) {
+  const version = Constants.nativeAppVersion ?? Constants.expoConfig?.version ?? '1.0.0';
+  const build = Constants.nativeBuildVersion ?? 'preview';
+
   return (
     <View style={styles.settings}>
       <Text style={styles.settingsEyebrow}>Configuracoes</Text>
@@ -281,6 +285,12 @@ function SettingsView({ context, onSimulateError, user }: { context: UserContext
         <Text style={styles.settingValue}>{user.profile === 'gatehouse' ? 'Portaria' : 'Morador'}</Text>
         <Text style={styles.settingLabel}>Recursos do condominio</Text>
         <Text style={styles.settingValue}>{context.features?.INTERCOM !== false ? 'Interfone habilitado' : 'Interfone indisponivel'}</Text>
+        <Text style={styles.settingLabel}>Versao instalada</Text>
+        <Text style={styles.settingValue}>
+          {version} ({build})
+        </Text>
+        <Text style={styles.settingLabel}>Atualizacoes</Text>
+        <Text style={styles.settingValue}>Pela loja oficial quando publicado; no piloto, pelo APK mais recente validado.</Text>
       </View>
       {env.enableErrorTest ? (
         <View style={styles.dangerPanel}>

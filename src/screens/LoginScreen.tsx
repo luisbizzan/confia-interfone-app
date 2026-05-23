@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import {
   ActivityIndicator,
   Keyboard,
@@ -14,6 +14,7 @@ import {
 
 import { Card } from '../components/Card';
 import { PrimaryButton } from '../components/PrimaryButton';
+import { reportAppError } from '../services/error-reporting';
 import { hasSupabaseConfig } from '../services/supabase';
 import { theme } from '../theme/theme';
 
@@ -25,7 +26,18 @@ export function LoginScreen({ onLogin }: LoginScreenProps) {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [error, setError] = useState<string | null>(null);
+  const [isKeyboardVisible, setIsKeyboardVisible] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
+
+  useEffect(() => {
+    const showSubscription = Keyboard.addListener('keyboardDidShow', () => setIsKeyboardVisible(true));
+    const hideSubscription = Keyboard.addListener('keyboardDidHide', () => setIsKeyboardVisible(false));
+
+    return () => {
+      showSubscription.remove();
+      hideSubscription.remove();
+    };
+  }, []);
 
   async function handleSubmit() {
     setError(null);
@@ -39,17 +51,25 @@ export function LoginScreen({ onLogin }: LoginScreenProps) {
     try {
       await onLogin(email, password);
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Nao foi possivel entrar.');
+      const message = getLoginErrorMessage(err);
+      setError(message);
+
+      if (shouldReportLoginError(err)) {
+        void reportAppError(err, {
+          metadata: { email: email.trim(), stage: 'login' },
+          source: 'login-error',
+        });
+      }
     } finally {
       setIsSubmitting(false);
     }
   }
 
   return (
-    <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : 'height'} style={styles.keyboardView}>
+    <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : undefined} style={styles.keyboardView}>
       <TouchableWithoutFeedback accessible={false} onPress={Keyboard.dismiss}>
         <ScrollView
-          contentContainerStyle={styles.container}
+          contentContainerStyle={[styles.container, isKeyboardVisible && styles.containerWithKeyboard]}
           keyboardShouldPersistTaps="handled"
           showsVerticalScrollIndicator={false}
         >
@@ -103,6 +123,25 @@ export function LoginScreen({ onLogin }: LoginScreenProps) {
   );
 }
 
+function getLoginErrorMessage(error: unknown) {
+  const message = error instanceof Error ? error.message : 'Nao foi possivel entrar.';
+
+  if (/invalid login credentials|invalid credentials|email not confirmed/i.test(message)) {
+    return 'E-mail ou senha invalidos.';
+  }
+
+  if (/failed to fetch|network request failed|timeout/i.test(message)) {
+    return 'Nao foi possivel conectar. Verifique sua internet e tente novamente.';
+  }
+
+  return 'Nao foi possivel entrar agora. O erro foi registrado para analise tecnica.';
+}
+
+function shouldReportLoginError(error: unknown) {
+  const message = error instanceof Error ? error.message : String(error);
+  return !/invalid login credentials|invalid credentials|email not confirmed/i.test(message);
+}
+
 const styles = StyleSheet.create({
   keyboardView: {
     flex: 1,
@@ -112,6 +151,11 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     minHeight: '100%',
     padding: theme.spacing.lg,
+  },
+  containerWithKeyboard: {
+    justifyContent: 'flex-start',
+    paddingBottom: 280,
+    paddingTop: theme.spacing.lg,
   },
   brand: {
     color: theme.colors.primary,

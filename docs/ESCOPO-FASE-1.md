@@ -559,6 +559,20 @@ Escopo previsto restante:
   - artefato `https://expo.dev/artifacts/eas/hjrDdR8wRD6rTahzeMST9P.apk`;
   - APK baixado e validado como arquivo integro;
   - instalacao ADB nao executada porque nenhum dispositivo apareceu em `adb devices`.
+  - ajustes adicionais apos teste de 23/05/2026:
+    - tela de Configuracoes passa a exibir versao instalada e build;
+    - login usa modo Android `softwareKeyboardLayoutMode = resize`, reposiciona o card quando o teclado abre e registra erros inesperados;
+    - lista de unidades passa a consultar chamadas ativas do condominio para exibir `Em atendimento` quando uma unidade esta ocupada;
+    - erros inesperados de cancelar/encerrar chamada passam a ter mensagem amigavel e reporte tecnico.
+
+### Atualizacoes do app
+
+Estrategia definida:
+
+- durante o piloto, cada APK validado fica documentado nesta fase com link, commit e build EAS;
+- na publicacao oficial, a atualizacao principal sera feita pela Google Play/App Store;
+- antes de publicar, implementar verificacao de versao minima no backend para bloquear versoes antigas com mensagem amigavel;
+- avaliar `expo-updates`/EAS Update apenas para ajustes JS seguros, sem substituir revisao de loja quando houver mudanca nativa.
 
 ### Fase 3 - Notificacoes e background
 

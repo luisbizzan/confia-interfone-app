@@ -56,6 +56,7 @@ export type UserContext = {
 export type UnitDirectoryItem = {
   activeResidentsCount?: number;
   id: string;
+  isBusy?: boolean;
   label: string;
   type: string;
   residents: string[];

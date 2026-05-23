@@ -637,3 +637,7 @@ A estrategia inicial sera considerada pronta quando conseguirmos rodar, de forma
 - Build de referencia com refinamentos dos videos: EAS Android `dd8556ac-bed0-4778-abf8-1b49547bb562`, APK `https://expo.dev/artifacts/eas/tmxZSDx6kN4WCcQPsaZC4L.apk`.
 - Validar em aparelho fisico que o login se ajusta ao teclado, o botao `Entrar` continua acessivel e o submit pela tecla `done` funciona.
 - Build de referencia com login ajustado: EAS Android `842568a1-3395-4ffe-a8bc-f449de4eea2b`, APK `https://expo.dev/artifacts/eas/hjrDdR8wRD6rTahzeMST9P.apk`.
+- Validar que Configuracoes exibe versao instalada e build.
+- Validar que unidade ocupada por chamada com portaria ou outra unidade aparece como `Em atendimento` para demais usuarios.
+- Validar que erros inesperados de login/cancelar/encerrar chamada nao mostram stack/mensagem tecnica ao usuario e sao reportados ao backend.
+- Validar futuramente politica de versao minima antes de liberar piloto externo.

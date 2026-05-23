@@ -141,6 +141,7 @@ async function loadDirectoryUnits(): Promise<UnitDirectoryItem[]> {
     return {
       activeResidentsCount: activeReceivers.length,
       id: unit.id,
+      isBusy: false,
       label: [unit.block, unit.number].filter(Boolean).join(' - '),
       type: unit.type === 'HOUSE' ? 'Casa' : 'Apartamento',
       residents: [activeReceivers.length > 0 ? `${activeReceivers.length} morador(es) ativo(s)` : 'Sem morador ativo para chamadas'],

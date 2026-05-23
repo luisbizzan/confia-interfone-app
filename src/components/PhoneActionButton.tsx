@@ -6,6 +6,7 @@ import { theme } from '../theme/theme';
 type PhoneActionButtonProps = {
   accessibilityLabel: string;
   disabled?: boolean;
+  muted?: boolean;
   onPress: () => void;
   testID?: string;
 };
@@ -13,6 +14,7 @@ type PhoneActionButtonProps = {
 export function PhoneActionButton({
   accessibilityLabel,
   disabled = false,
+  muted = false,
   onPress,
   testID,
 }: PhoneActionButtonProps) {
@@ -21,11 +23,11 @@ export function PhoneActionButton({
       accessibilityLabel={accessibilityLabel}
       accessibilityRole="button"
       disabled={disabled}
-      style={[styles.button, disabled && styles.disabled]}
+      style={[styles.button, (disabled || muted) && styles.disabled]}
       testID={testID}
       onPress={onPress}
     >
-      <MaterialIcons color={disabled ? theme.colors.muted : '#ffffff'} name="call" size={26} />
+      <MaterialIcons color={disabled || muted ? theme.colors.muted : '#ffffff'} name="call" size={26} />
     </TouchableOpacity>
   );
 }

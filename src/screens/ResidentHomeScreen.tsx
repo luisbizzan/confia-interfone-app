@@ -6,6 +6,7 @@ import { Card } from '../components/Card';
 import { PhoneActionButton } from '../components/PhoneActionButton';
 import { PrimaryButton } from '../components/PrimaryButton';
 import { demoUnits } from '../data/demo-data';
+import { buildBusyUnitIds, getActiveCondominiumCalls } from '../services/availability';
 import {
   answerResidentCall,
   cancelCall,
@@ -17,6 +18,7 @@ import {
 } from '../services/calls';
 import { isCallRelevantToResident, isOutgoingResidentCall } from '../services/call-ownership';
 import { getErrorMessage, logCallDiagnostic } from '../services/diagnostics';
+import { reportAppError } from '../services/error-reporting';
 import { theme } from '../theme/theme';
 import type { AuthenticatedUser, BackendCallRecord, CallRecord, PendingUnitCall, UnitDirectoryItem, UserContext } from '../types/domain';
 
@@ -37,18 +39,19 @@ export function ResidentHomeScreen({ context, directoryUnits, user }: ResidentHo
   const [history, setHistory] = useState<CallRecord[]>([]);
   const [pendingCalls, setPendingCalls] = useState<PendingUnitCall[]>([]);
   const [feedback, setFeedback] = useState<string | null>(null);
+  const [busyUnitIds, setBusyUnitIds] = useState<Set<string>>(new Set());
   const [activeCallTarget, setActiveCallTarget] = useState<string | null>(null);
   const [showHistory, setShowHistory] = useState(false);
 
   useEffect(() => {
-    refreshResidentData(unitLabels, setHistory, setPendingCalls, setFeedback);
+    refreshResidentData(unitLabels, setHistory, setPendingCalls, setFeedback, undefined, user.condominiumId, setBusyUnitIds);
 
     const interval = setInterval(() => {
-      refreshResidentData(unitLabels, setHistory, setPendingCalls, setFeedback, { silent: true });
+      refreshResidentData(unitLabels, setHistory, setPendingCalls, setFeedback, { silent: true }, user.condominiumId, setBusyUnitIds);
     }, CALL_REFRESH_INTERVAL_MS);
 
     return () => clearInterval(interval);
-  }, [unitLabels]);
+  }, [unitLabels, user.condominiumId]);
 
   const relevantHistory = history.filter((call) => isCallRelevantToResident(call, context));
   const activeCall = relevantHistory.find((call) => call.status === 'ANSWERED' && !call.endedAt);
@@ -134,6 +137,7 @@ export function ResidentHomeScreen({ context, directoryUnits, user }: ResidentHo
               setFeedback={setFeedback}
               setHistory={setHistory}
               setPendingCalls={setPendingCalls}
+              busyUnitIds={busyUnitIds}
               unit={unit}
               unitLabels={unitLabels}
               user={user}
@@ -162,6 +166,7 @@ export function ResidentHomeScreen({ context, directoryUnits, user }: ResidentHo
 function buildUnitsFromContext(context: UserContext): UnitDirectoryItem[] {
   return context.unit_members.map((member) => ({
     id: member.unit.id,
+    isBusy: false,
     label: formatUnitLabel(member.unit),
     type: member.unit.type === 'HOUSE' ? 'Casa' : 'Apartamento',
     activeResidentsCount: member.active_for_calls && member.can_receive_calls ? 1 : 0,
@@ -181,6 +186,7 @@ function buildUnitLabelMap(units: UnitDirectoryItem[]) {
 
 function UnitCard({
   activeCallTarget,
+  busyUnitIds,
   originUnitId,
   setActiveCallTarget,
   setFeedback,
@@ -191,6 +197,7 @@ function UnitCard({
   user,
 }: {
   activeCallTarget: string | null;
+  busyUnitIds: Set<string>;
   originUnitId: string | null;
   setActiveCallTarget: (target: string | null) => void;
   setFeedback: (message: string | null) => void;
@@ -201,7 +208,8 @@ function UnitCard({
   user: AuthenticatedUser;
 }) {
   const canCallUnit = Boolean(unit.canReceiveCalls && originUnitId);
-  const helper = unit.canReceiveCalls ? 'Disponivel' : 'Indisponivel';
+  const isBusy = busyUnitIds.has(unit.id);
+  const helper = isBusy ? 'Em atendimento' : unit.canReceiveCalls ? 'Disponivel' : 'Indisponivel';
 
   return (
     <Card>
@@ -214,9 +222,15 @@ function UnitCard({
         </View>
         <PhoneActionButton
           accessibilityLabel={`Chamar unidade ${unit.label}`}
-          disabled={!canCallUnit || activeCallTarget !== null}
+          disabled={activeCallTarget !== null}
+          muted={!canCallUnit || isBusy}
           testID={canCallUnit ? 'resident-call-unit' : 'resident-unit-unavailable'}
           onPress={() => {
+            if (isBusy) {
+              showInfo('Unidade em atendimento', 'Esta unidade esta em atendimento. Tente novamente em alguns minutos.');
+              return;
+            }
+
             if (!originUnitId || !canCallUnit) {
               showInfo('Chamada indisponivel', helper);
               return;
@@ -236,7 +250,7 @@ function UnitCard({
           }}
         />
       </View>
-      <Text style={[styles.itemHelp, unit.canReceiveCalls ? styles.available : styles.unavailable]}>
+      <Text style={[styles.itemHelp, !isBusy && unit.canReceiveCalls ? styles.available : styles.unavailable]}>
         {activeCallTarget === unit.id ? 'Chamando...' : helper}
       </Text>
     </Card>
@@ -280,11 +294,24 @@ async function refreshResidentData(
   setPendingCalls: (calls: PendingUnitCall[]) => void,
   setFeedback: (message: string | null) => void,
   options?: { silent?: boolean },
+  condominiumId?: string,
+  setBusyUnitIds?: (unitIds: Set<string>) => void,
 ) {
-  await Promise.all([
+  const tasks: Promise<void>[] = [
     refreshHistory(unitLabels, setHistory, setFeedback, options),
     refreshPendingCalls(setPendingCalls, setFeedback, options),
-  ]);
+  ];
+
+  if (condominiumId && setBusyUnitIds) {
+    tasks.push(refreshBusyUnits(condominiumId, setBusyUnitIds));
+  }
+
+  await Promise.all(tasks);
+}
+
+async function refreshBusyUnits(condominiumId: string, setBusyUnitIds: (unitIds: Set<string>) => void) {
+  const activeCalls = await getActiveCondominiumCalls(condominiumId);
+  setBusyUnitIds(buildBusyUnitIds(activeCalls));
 }
 
 async function refreshHistory(
@@ -485,8 +512,9 @@ async function handleCancelCall(
     setFeedback('Chamada cancelada.');
     await refreshResidentData(unitLabels, setHistory, setPendingCalls, setFeedback);
   } catch (err) {
-    const message = getErrorMessage(err);
+    const message = getCallActionErrorMessage(err);
     void logCallDiagnostic({ action: 'resident_cancel_call', callId, durationMs: Date.now() - startedAt, errorMessage: message, result: 'ERROR', user });
+    reportUnexpectedCallError(err, user, 'resident_cancel_call', callId);
     setFeedback(null);
     showInfo('Nao foi possivel cancelar', message);
   }
@@ -517,8 +545,9 @@ async function handleEndCall(
     setFeedback('Chamada encerrada.');
     await refreshResidentData(unitLabels, setHistory, setPendingCalls, setFeedback);
   } catch (err) {
-    const message = getErrorMessage(err);
+    const message = getCallActionErrorMessage(err);
     void logCallDiagnostic({ action: 'resident_end_call', callId, durationMs: Date.now() - startedAt, errorMessage: message, result: 'ERROR', user });
+    reportUnexpectedCallError(err, user, 'resident_end_call', callId);
     setFeedback(null);
     showInfo('Nao foi possivel encerrar', message);
   }
@@ -619,6 +648,29 @@ function buildOptimisticCall({
     toLabel,
     unitId,
   };
+}
+
+function getCallActionErrorMessage(error: unknown) {
+  const message = getErrorMessage(error);
+
+  if (/cannot end|cannot cancel|not allowed|not authorized/i.test(message)) {
+    return 'Esta chamada ja foi encerrada ou nao pertence mais a este dispositivo. Atualize a tela e tente novamente.';
+  }
+
+  return message;
+}
+
+function reportUnexpectedCallError(error: unknown, user: AuthenticatedUser, action: string, callId: string) {
+  const message = getErrorMessage(error);
+
+  if (/atendimento|ocupad|busy/i.test(message)) {
+    return;
+  }
+
+  void reportAppError(error, {
+    metadata: { action, callId, profile: user.profile, userId: user.id },
+    source: 'call-action-error',
+  });
 }
 
 function callStatusLabel(status: CallRecord['status']) {

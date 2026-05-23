@@ -6,9 +6,11 @@ import { Card } from '../components/Card';
 import { PhoneActionButton } from '../components/PhoneActionButton';
 import { PrimaryButton } from '../components/PrimaryButton';
 import { demoUnits } from '../data/demo-data';
+import { buildBusyUnitIds, getActiveCondominiumCalls } from '../services/availability';
 import { answerGatehouseCall, cancelCall, endCall, getMyCallHistory, getMyPendingCalls, startGatehouseToUnitCall } from '../services/calls';
 import { isCallRelevantToGatehouse, isOutgoingGatehouseCall } from '../services/call-ownership';
 import { getErrorMessage, logCallDiagnostic } from '../services/diagnostics';
+import { reportAppError } from '../services/error-reporting';
 import { theme } from '../theme/theme';
 import type { AuthenticatedUser, BackendCallRecord, CallRecord, PendingPortariaCall, UnitDirectoryItem, UserContext } from '../types/domain';
 
@@ -27,19 +29,20 @@ export function GatehouseHomeScreen({ context, directoryUnits, user }: Gatehouse
   const [feedback, setFeedback] = useState<string | null>(null);
   const [history, setHistory] = useState<CallRecord[]>([]);
   const [pendingCalls, setPendingCalls] = useState<PendingPortariaCall[]>([]);
+  const [busyUnitIds, setBusyUnitIds] = useState<Set<string>>(new Set());
   const [activeCallTarget, setActiveCallTarget] = useState<string | null>(null);
   const [showHistory, setShowHistory] = useState(false);
   const ringingCalls = pendingCalls.length;
 
   useEffect(() => {
-    refreshGatehouseData(unitLabels, setHistory, setPendingCalls, setFeedback);
+    refreshGatehouseData(unitLabels, setHistory, setPendingCalls, setFeedback, undefined, user.condominiumId, setBusyUnitIds);
 
     const interval = setInterval(() => {
-      refreshGatehouseData(unitLabels, setHistory, setPendingCalls, setFeedback, { silent: true });
+      refreshGatehouseData(unitLabels, setHistory, setPendingCalls, setFeedback, { silent: true }, user.condominiumId, setBusyUnitIds);
     }, CALL_REFRESH_INTERVAL_MS);
 
     return () => clearInterval(interval);
-  }, [unitLabels]);
+  }, [unitLabels, user.condominiumId]);
 
   const relevantHistory = history.filter((call) => isCallRelevantToGatehouse(call, context));
   const activeCall = relevantHistory.find((call) => call.status === 'ANSWERED' && !call.endedAt);
@@ -114,6 +117,7 @@ export function GatehouseHomeScreen({ context, directoryUnits, user }: Gatehouse
             <GatehouseUnitCard
               activeCallTarget={activeCallTarget}
               activeDeviceId={activeDevice?.id ?? null}
+              busyUnitIds={busyUnitIds}
               key={unit.id}
               setActiveCallTarget={setActiveCallTarget}
               setFeedback={setFeedback}
@@ -148,6 +152,7 @@ export function GatehouseHomeScreen({ context, directoryUnits, user }: Gatehouse
 function GatehouseUnitCard({
   activeCallTarget,
   activeDeviceId,
+  busyUnitIds,
   setActiveCallTarget,
   setFeedback,
   setHistory,
@@ -158,6 +163,7 @@ function GatehouseUnitCard({
 }: {
   activeCallTarget: string | null;
   activeDeviceId: string | null;
+  busyUnitIds: Set<string>;
   setActiveCallTarget: (target: string | null) => void;
   setFeedback: (message: string | null) => void;
   setHistory: (history: CallRecord[]) => void;
@@ -166,6 +172,9 @@ function GatehouseUnitCard({
   unitLabels: Map<string, string>;
   user: AuthenticatedUser;
 }) {
+  const isBusy = busyUnitIds.has(unit.id);
+  const helper = isBusy ? 'Em atendimento' : unit.canReceiveCalls ? 'Disponivel' : 'Bloqueada';
+
   return (
     <Card>
       <View style={styles.unitRow}>
@@ -175,10 +184,13 @@ function GatehouseUnitCard({
         </View>
         <PhoneActionButton
           accessibilityLabel={`Chamar unidade ${unit.label}`}
-          disabled={!unit.canReceiveCalls || activeCallTarget !== null}
+          disabled={activeCallTarget !== null}
+          muted={!unit.canReceiveCalls || isBusy}
           testID={unit.canReceiveCalls ? 'gatehouse-call-unit' : 'gatehouse-unit-unavailable'}
           onPress={() =>
-            unit.canReceiveCalls
+            isBusy
+              ? showInfo('Unidade em atendimento', 'Esta unidade esta em atendimento. Tente novamente em alguns minutos.')
+              : unit.canReceiveCalls
               ? handleGatehouseToUnitCall(
                   unit.id,
                   unit.label,
@@ -194,8 +206,8 @@ function GatehouseUnitCard({
           }
         />
       </View>
-      <Text style={[styles.itemHelp, unit.canReceiveCalls ? styles.statusOk : styles.statusBlocked]}>
-        {activeCallTarget === unit.id ? 'Chamando...' : unit.canReceiveCalls ? 'Disponivel' : 'Bloqueada'}
+      <Text style={[styles.itemHelp, !isBusy && unit.canReceiveCalls ? styles.statusOk : styles.statusBlocked]}>
+        {activeCallTarget === unit.id ? 'Chamando...' : helper}
       </Text>
     </Card>
   );
@@ -235,11 +247,24 @@ async function refreshGatehouseData(
   setPendingCalls: (calls: PendingPortariaCall[]) => void,
   setFeedback: (message: string | null) => void,
   options?: { silent?: boolean },
+  condominiumId?: string,
+  setBusyUnitIds?: (unitIds: Set<string>) => void,
 ) {
-  await Promise.all([
+  const tasks: Promise<void>[] = [
     refreshHistory(unitLabels, setHistory, setFeedback, options),
     refreshPendingCalls(setPendingCalls, setFeedback, options),
-  ]);
+  ];
+
+  if (condominiumId && setBusyUnitIds) {
+    tasks.push(refreshBusyUnits(condominiumId, setBusyUnitIds));
+  }
+
+  await Promise.all(tasks);
+}
+
+async function refreshBusyUnits(condominiumId: string, setBusyUnitIds: (unitIds: Set<string>) => void) {
+  const activeCalls = await getActiveCondominiumCalls(condominiumId);
+  setBusyUnitIds(buildBusyUnitIds(activeCalls));
 }
 
 async function handleGatehouseToUnitCall(
@@ -355,8 +380,9 @@ async function handleCancelCall(
     setFeedback('Chamada cancelada.');
     await refreshGatehouseData(unitLabels, setHistory, setPendingCalls, setFeedback);
   } catch (err) {
-    const message = getErrorMessage(err);
+    const message = getCallActionErrorMessage(err);
     void logCallDiagnostic({ action: 'gatehouse_cancel_call', callId, durationMs: Date.now() - startedAt, errorMessage: message, result: 'ERROR', user });
+    reportUnexpectedCallError(err, user, 'gatehouse_cancel_call', callId);
     setFeedback(null);
     showInfo('Nao foi possivel cancelar', message);
   }
@@ -387,11 +413,35 @@ async function handleEndCall(
     setFeedback('Chamada encerrada.');
     await refreshGatehouseData(unitLabels, setHistory, setPendingCalls, setFeedback);
   } catch (err) {
-    const message = getErrorMessage(err);
+    const message = getCallActionErrorMessage(err);
     void logCallDiagnostic({ action: 'gatehouse_end_call', callId, durationMs: Date.now() - startedAt, errorMessage: message, result: 'ERROR', user });
+    reportUnexpectedCallError(err, user, 'gatehouse_end_call', callId);
     setFeedback(null);
     showInfo('Nao foi possivel encerrar', message);
   }
+}
+
+function getCallActionErrorMessage(error: unknown) {
+  const message = getErrorMessage(error);
+
+  if (/cannot end|cannot cancel|not allowed|not authorized/i.test(message)) {
+    return 'Esta chamada ja foi encerrada ou nao pertence mais a este dispositivo. Atualize a tela e tente novamente.';
+  }
+
+  return message;
+}
+
+function reportUnexpectedCallError(error: unknown, user: AuthenticatedUser, action: string, callId: string) {
+  const message = getErrorMessage(error);
+
+  if (/atendimento|ocupad|busy/i.test(message)) {
+    return;
+  }
+
+  void reportAppError(error, {
+    metadata: { action, callId, profile: user.profile, userId: user.id },
+    source: 'call-action-error',
+  });
 }
 
 function buildOptimisticCall({
