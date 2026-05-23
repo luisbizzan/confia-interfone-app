@@ -1,6 +1,5 @@
 import type { ReactNode } from 'react';
 import { MaterialIcons } from '@expo/vector-icons';
-import { useAudioPlayer } from 'expo-audio';
 import { useEffect } from 'react';
 import { Platform, StyleSheet, Text, Vibration, View } from 'react-native';
 
@@ -52,11 +51,22 @@ export function IncomingCallExperience({
 }
 
 function useIncomingCallAlert() {
-  const ringtone = useAudioPlayer(require('../../assets/incoming-call.wav'));
-
   useEffect(() => {
-    ringtone.loop = true;
-    ringtone.play();
+    let ringtone: { loop?: boolean; pause?: () => void; play?: () => void; seekTo?: (seconds: number) => void } | null = null;
+
+    try {
+      const audio = require('expo-audio') as {
+        createAudioPlayer?: (source: number) => { loop?: boolean; pause?: () => void; play?: () => void; seekTo?: (seconds: number) => void };
+      };
+      ringtone = audio.createAudioPlayer?.(require('../../assets/incoming-call.wav')) ?? null;
+
+      if (ringtone) {
+        ringtone.loop = true;
+        ringtone.play?.();
+      }
+    } catch {
+      ringtone = null;
+    }
 
     if (Platform.OS === 'android') {
       Vibration.vibrate([0, 700, 650], true);
@@ -65,11 +75,11 @@ function useIncomingCallAlert() {
     }
 
     return () => {
-      ringtone.pause();
-      ringtone.seekTo(0);
+      ringtone?.pause?.();
+      ringtone?.seekTo?.(0);
       Vibration.cancel();
     };
-  }, [ringtone]);
+  }, []);
 }
 
 export function OutgoingCallExperience({ call, onCancel }: OutgoingCallExperienceProps) {
