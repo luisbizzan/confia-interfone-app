@@ -562,8 +562,14 @@ Escopo previsto restante:
   - ajustes adicionais apos teste de 23/05/2026:
     - tela de Configuracoes passa a exibir versao instalada e build;
     - login usa modo Android `softwareKeyboardLayoutMode = resize`, reposiciona o card quando o teclado abre e registra erros inesperados;
-    - lista de unidades passa a consultar chamadas ativas do condominio para exibir `Em atendimento` quando uma unidade esta ocupada;
-    - erros inesperados de cancelar/encerrar chamada passam a ter mensagem amigavel e reporte tecnico.
+  - lista de unidades passa a consultar chamadas ativas do condominio para exibir `Em atendimento` quando uma unidade esta ocupada;
+  - erros inesperados de cancelar/encerrar chamada passam a ter mensagem amigavel e reporte tecnico.
+  - build EAS Android com disponibilidade, mensagens amigaveis e versao em Configuracoes `4ac99f56-0865-4ecb-87ca-1d0715d66254`;
+  - commit embarcado `8c6a7f6 Improve app call availability and diagnostics UX`;
+  - artefato `https://expo.dev/artifacts/eas/aeCQUFg9bR5Zh9723Ftutw.apk`;
+  - APK baixado e validado como arquivo integro em `confia-interfone-preview-8c6a7f6.apk`;
+  - instalacao ADB nao executada porque nenhum dispositivo apareceu em `adb devices`;
+  - `versionCode` foi elevado para `8` no commit seguinte `40959fd`, mas o novo build EAS ficou pendente por limite mensal do plano Free, com reset informado para 01/06/2026.
 
 ### Atualizacoes do app
 

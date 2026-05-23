@@ -641,3 +641,5 @@ A estrategia inicial sera considerada pronta quando conseguirmos rodar, de forma
 - Validar que unidade ocupada por chamada com portaria ou outra unidade aparece como `Em atendimento` para demais usuarios.
 - Validar que erros inesperados de login/cancelar/encerrar chamada nao mostram stack/mensagem tecnica ao usuario e sao reportados ao backend.
 - Validar futuramente politica de versao minima antes de liberar piloto externo.
+- Build de referencia com disponibilidade/diagnostico/versionamento: EAS Android `4ac99f56-0865-4ecb-87ca-1d0715d66254`, APK `https://expo.dev/artifacts/eas/aeCQUFg9bR5Zh9723Ftutw.apk`.
+- Validar no proximo build, apos liberar cota EAS ou build local, que Configuracoes mostra `1.0.1 (8)`.
