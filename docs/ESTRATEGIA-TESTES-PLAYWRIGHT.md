@@ -240,6 +240,11 @@ Atualizacao apos regra de ocupacao no backend:
   - morador A tenta iniciar outra chamada;
   - app deve exibir `Sua unidade esta em atendimento. Encerre a chamada atual antes de iniciar outra.`
 - Validar que, apos `end_call`, a nova chamada volta a ser permitida.
+- APK de referencia para teste manual com tres celulares:
+  - EAS build Android `e15d1dcc-8ce6-4587-bd73-e001a95ce137`;
+  - commit `73ff0d7 Document busy call target rule`;
+  - artefato `https://expo.dev/artifacts/eas/tQ5krp8VidvgyVhsA8TB62.apk`;
+  - instalado no aparelho conectado e abertura inicial confirmada por logcat.
 
 Estrategia de push notifications:
 

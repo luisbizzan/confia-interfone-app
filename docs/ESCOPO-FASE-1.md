@@ -478,6 +478,12 @@ Entregas iniciadas:
   - nova chamada para unidade e bloqueada quando a unidade ja estiver em `RINGING` ou `ANSWERED` sem `ended_at`;
   - origem tambem fica protegida: unidade ou portaria em atendimento nao inicia outra chamada;
   - app recebe mensagens amigaveis do backend para exibir ao usuario.
+- APK preview para teste com tres celulares:
+  - build EAS Android `e15d1dcc-8ce6-4587-bd73-e001a95ce137`;
+  - commit embarcado `73ff0d7 Document busy call target rule`;
+  - artefato `https://expo.dev/artifacts/eas/tQ5krp8VidvgyVhsA8TB62.apk`;
+  - instalado via ADB no dispositivo conectado `SM-N981B`;
+  - abertura inicial validada por logcat sem crash fatal.
 
 Regras de seguranca:
 
