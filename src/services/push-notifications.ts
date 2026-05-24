@@ -19,99 +19,106 @@ Notifications.setNotificationHandler({
 const INCOMING_CALLS_CHANNEL_ID = 'incoming-calls';
 
 export async function registerForPushNotifications(user: AuthenticatedUser) {
-  if (!supabase || Platform.OS === 'web') {
+  try {
+    if (!supabase || Platform.OS === 'web') {
+      void logCallDiagnostic({
+        action: 'push_registration',
+        metadata: { reason: !supabase ? 'supabase_not_configured' : 'web_platform' },
+        result: 'SUCCESS',
+        user,
+      });
+      return null;
+    }
+
+    if (!Device.isDevice) {
+      void logCallDiagnostic({
+        action: 'push_registration',
+        metadata: { reason: 'not_physical_device' },
+        result: 'SUCCESS',
+        user,
+      });
+      return null;
+    }
+
     void logCallDiagnostic({
       action: 'push_registration',
-      metadata: { reason: !supabase ? 'supabase_not_configured' : 'web_platform' },
+      metadata: { platform: Platform.OS },
+      result: 'STARTED',
+      user,
+    });
+
+    await configureAndroidNotificationChannel();
+
+    const permission = await ensureNotificationPermission();
+
+    if (!permission) {
+      void logCallDiagnostic({
+        action: 'push_registration',
+        metadata: { permission: 'denied' },
+        result: 'ERROR',
+        user,
+      });
+      return null;
+    }
+
+    const projectId = getExpoProjectId();
+
+    if (!projectId) {
+      void logCallDiagnostic({
+        action: 'push_registration',
+        errorMessage: 'Expo projectId nao configurado para push notifications.',
+        result: 'ERROR',
+        user,
+      });
+      throw new Error('Expo projectId nao configurado para push notifications.');
+    }
+
+    const token = await Notifications.getExpoPushTokenAsync({ projectId });
+    const appVersion = Constants.nativeAppVersion ?? Constants.expoConfig?.version ?? '1.0.0';
+    const appBuild = Constants.nativeBuildVersion ?? 'preview';
+
+    const { error } = await supabase.rpc('register_app_push_token', {
+      p_app_build: appBuild,
+      p_app_version: appVersion,
+      p_device_id: Constants.sessionId ?? null,
+      p_device_name: Device.deviceName ?? `${Platform.OS} device`,
+      p_expo_push_token: token.data,
+      p_platform: Platform.OS,
+      p_profile: user.profile,
+    });
+
+    if (error) {
+      throw new Error(error.message);
+    }
+
+    void logCallDiagnostic({
+      action: 'push_registration',
+      metadata: {
+        app_build: appBuild,
+        app_version: appVersion,
+        permission: 'granted',
+        platform: Platform.OS,
+        token_length: token.data.length,
+        token_prefix: token.data.slice(0, 18),
+      },
       result: 'SUCCESS',
       user,
     });
-    return null;
-  }
 
-  if (!Device.isDevice) {
+    return token.data;
+  } catch (error) {
     void logCallDiagnostic({
       action: 'push_registration',
-      metadata: { reason: 'not_physical_device' },
-      result: 'SUCCESS',
-      user,
-    });
-    return null;
-  }
-
-  void logCallDiagnostic({
-    action: 'push_registration',
-    metadata: { platform: Platform.OS },
-    result: 'STARTED',
-    user,
-  });
-
-  await configureAndroidNotificationChannel();
-
-  const permission = await ensureNotificationPermission();
-
-  if (!permission) {
-    void logCallDiagnostic({
-      action: 'push_registration',
-      metadata: { permission: 'denied' },
+      errorMessage: getPushErrorMessage(error),
+      metadata: {
+        platform: Platform.OS,
+      },
       result: 'ERROR',
       user,
     });
-    return null;
+
+    throw error;
   }
-
-  const projectId = getExpoProjectId();
-
-  if (!projectId) {
-    void logCallDiagnostic({
-      action: 'push_registration',
-      errorMessage: 'Expo projectId nao configurado para push notifications.',
-      result: 'ERROR',
-      user,
-    });
-    throw new Error('Expo projectId nao configurado para push notifications.');
-  }
-
-  const token = await Notifications.getExpoPushTokenAsync({ projectId });
-  const appVersion = Constants.nativeAppVersion ?? Constants.expoConfig?.version ?? '1.0.0';
-  const appBuild = Constants.nativeBuildVersion ?? 'preview';
-
-  const { error } = await supabase.rpc('register_app_push_token', {
-    p_app_build: appBuild,
-    p_app_version: appVersion,
-    p_device_id: Constants.sessionId ?? null,
-    p_device_name: Device.deviceName ?? `${Platform.OS} device`,
-    p_expo_push_token: token.data,
-    p_platform: Platform.OS,
-    p_profile: user.profile,
-  });
-
-  if (error) {
-    void logCallDiagnostic({
-      action: 'push_registration',
-      errorMessage: error.message,
-      metadata: { permission: 'granted', project_id_present: true },
-      result: 'ERROR',
-      user,
-    });
-    throw new Error(error.message);
-  }
-
-  void logCallDiagnostic({
-    action: 'push_registration',
-    metadata: {
-      app_build: appBuild,
-      app_version: appVersion,
-      permission: 'granted',
-      platform: Platform.OS,
-      token_length: token.data.length,
-      token_prefix: token.data.slice(0, 18),
-    },
-    result: 'SUCCESS',
-    user,
-  });
-
-  return token.data;
 }
 
 export async function unregisterPushToken(token: string | null) {
@@ -181,4 +188,8 @@ function getExpoProjectId() {
   };
 
   return constants.easConfig?.projectId ?? constants.expoConfig?.extra?.eas?.projectId;
+}
+
+function getPushErrorMessage(error: unknown) {
+  return error instanceof Error ? error.message : 'Erro desconhecido ao registrar notificacoes.';
 }

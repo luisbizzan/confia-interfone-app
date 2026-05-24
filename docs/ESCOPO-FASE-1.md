@@ -605,6 +605,10 @@ Implementado em 23/05/2026:
 - Edge Function grava diagnosticos `push_notification_dispatch` em `app_call_diagnostics`, incluindo ausencia de token, quantidade de tokens enviados, tickets retornados pelo Expo ou erro de envio.
 - Bundle Android validado com `expo export --platform android`.
 - Em teste real com app em background, nao houve notificacao visual; a instrumentacao acima foi adicionada para separar problema de token, envio Expo ou credencial Android/FCM.
+- Diagnostico de 24/05/2026 confirmou que o APK local nao consegue registrar token Android por falta de Firebase/FCM nativo:
+  - erro capturado em `app_error_reports.source = push-registration`;
+  - mensagem tecnica: `Default FirebaseApp is not initialized`;
+  - acao necessaria: configurar FCM V1/`google-services.json` no projeto Expo/EAS antes de validar push em background.
 
 Pendencias de conta/build:
 
