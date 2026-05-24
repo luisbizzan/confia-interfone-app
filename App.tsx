@@ -47,6 +47,7 @@ function AppContent() {
   const [shouldSimulateError, setShouldSimulateError] = useState(false);
   const [globalCallState, setGlobalCallState] = useState<GlobalCallState>({ status: 'idle' });
   const [pushToken, setPushToken] = useState<string | null>(null);
+  const [pushRegistrationStatus, setPushRegistrationStatus] = useState<'idle' | 'registering' | 'registered' | 'unavailable' | 'error'>('idle');
 
   useEffect(() => {
     registerGlobalErrorHandlers();
@@ -67,18 +68,24 @@ function AppContent() {
   useEffect(() => {
     if (authState.status !== 'authenticated') {
       setPushToken(null);
+      setPushRegistrationStatus('idle');
       return undefined;
     }
 
     let mounted = true;
+    setPushRegistrationStatus('registering');
 
     registerForPushNotifications(authState.user)
       .then((token) => {
         if (mounted) {
           setPushToken(token);
+          setPushRegistrationStatus(token ? 'registered' : 'unavailable');
         }
       })
       .catch((error) => {
+        if (mounted) {
+          setPushRegistrationStatus('error');
+        }
         void reportAppError(error, { source: 'push-registration' });
       });
 
@@ -131,6 +138,7 @@ function AppContent() {
     setActiveView('home');
     setGlobalCallState({ status: 'idle' });
     setPushToken(null);
+    setPushRegistrationStatus('idle');
   }
 
   const authenticatedState = authState.status === 'authenticated' ? authState : null;
@@ -246,7 +254,13 @@ function AppContent() {
           <AppHomeScreen context={context} onOpenIntercom={() => setActiveView('intercom')} user={user} />
         ) : null}
         {globalCallState.status === 'idle' && activeView === 'settings' ? (
-          <SettingsView context={context} onSimulateError={() => setShouldSimulateError(true)} user={user} />
+          <SettingsView
+            context={context}
+            onSimulateError={() => setShouldSimulateError(true)}
+            pushRegistrationStatus={pushRegistrationStatus}
+            pushToken={pushToken}
+            user={user}
+          />
         ) : null}
         {globalCallState.status === 'idle' && activeView === 'intercom' && intercomEnabled && user.profile === 'resident' ? (
           <ResidentHomeScreen context={context} directoryUnits={units} user={user} />
@@ -304,7 +318,19 @@ function NavigationButton({
   );
 }
 
-function SettingsView({ context, onSimulateError, user }: { context: UserContext; onSimulateError: () => void; user: AuthenticatedUser }) {
+function SettingsView({
+  context,
+  onSimulateError,
+  pushRegistrationStatus,
+  pushToken,
+  user,
+}: {
+  context: UserContext;
+  onSimulateError: () => void;
+  pushRegistrationStatus: 'idle' | 'registering' | 'registered' | 'unavailable' | 'error';
+  pushToken: string | null;
+  user: AuthenticatedUser;
+}) {
   const version = Constants.nativeAppVersion ?? Constants.expoConfig?.version ?? '1.0.0';
   const build = Constants.nativeBuildVersion ?? 'preview';
 
@@ -321,6 +347,8 @@ function SettingsView({ context, onSimulateError, user }: { context: UserContext
         <Text style={styles.settingValue}>
           {version} ({build})
         </Text>
+        <Text style={styles.settingLabel}>Notificacoes</Text>
+        <Text style={styles.settingValue}>{formatPushRegistrationStatus(pushRegistrationStatus, pushToken)}</Text>
         <Text style={styles.settingLabel}>Atualizacoes</Text>
         <Text style={styles.settingValue}>Pela loja oficial quando publicado; no piloto, pelo APK mais recente validado.</Text>
       </View>
@@ -335,6 +363,26 @@ function SettingsView({ context, onSimulateError, user }: { context: UserContext
       ) : null}
     </View>
   );
+}
+
+function formatPushRegistrationStatus(status: 'idle' | 'registering' | 'registered' | 'unavailable' | 'error', token: string | null) {
+  if (status === 'registered' && token) {
+    return `Token registrado (${token.slice(0, 18)}...)`;
+  }
+
+  if (status === 'registering') {
+    return 'Registrando notificacoes...';
+  }
+
+  if (status === 'error') {
+    return 'Erro ao registrar notificacoes. Ver diagnosticos.';
+  }
+
+  if (status === 'unavailable') {
+    return 'Indisponivel neste aparelho/build.';
+  }
+
+  return 'Aguardando login.';
 }
 
 function buildUnitLabelMap(context: UserContext, units: UnitDirectoryItem[]) {

@@ -647,11 +647,18 @@ A estrategia inicial sera considerada pronta quando conseguirmos rodar, de forma
   - APK: `C:\Projetos\Confia\apks\confia-interfone-push-local-20260523.apk`;
   - comandos validados: `expo prebuild --platform android --clean --no-install`, `gradlew assembleDebug`, `gradlew assembleRelease`;
   - instalacao via ADB ficou pendente porque nenhum device estava visivel/autorizado no momento da tentativa.
+- APK local com diagnosticos de push para repetir teste em background:
+  - APK: `C:\Projetos\Confia\apks\confia-interfone-push-diagnostics-20260523.apk`;
+  - foco: confirmar token em Configuracoes e eventos `push_registration`/`push_notification_dispatch`;
+  - instalacao via ADB ficou pendente porque nenhum device estava visivel/autorizado no momento da tentativa.
 - Validar que login em aparelho fisico solicita permissao de notificacao e grava token em `app_push_tokens`.
+- Validar que Configuracoes exibe `Token registrado` quando o aparelho conseguiu criar token de push.
+- Validar que `app_call_diagnostics` registra `push_registration` com `SUCCESS` no aparelho receptor.
 - Validar que logout desativa o token em `app_push_tokens`.
 - Validar que chamada morador -> portaria chama `send-call-notification` e envia push para o usuario da portaria.
 - Validar que chamada portaria -> unidade chama `send-call-notification` e envia push para o morador da tentativa atual.
 - Validar que chamada unidade -> unidade envia push apenas para a unidade de destino.
+- Validar que `app_call_diagnostics` registra `push_notification_dispatch` com tickets do Expo ou motivo `no_tokens`.
 - Validar que tocar na notificacao abre o app na area de Interfone.
 - Validar que o iniciador da chamada nao recebe a propria notificacao.
 - Validar que, sem token cadastrado, a Edge Function retorna `skipped: true` e nao quebra o fluxo da chamada.

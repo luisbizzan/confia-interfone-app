@@ -595,12 +595,16 @@ Implementado em 23/05/2026:
 - Logout desativa o token atual via RPC `unregister_app_push_token`.
 - Quando o usuario toca numa notificacao de chamada, o app abre a area de Interfone.
 - Ao criar uma chamada, o app aciona a Edge Function `send-call-notification` em modo best effort.
+- Tela de Configuracoes mostra o status de notificacoes do aparelho: registrando, token registrado, indisponivel neste aparelho/build ou erro.
+- App grava diagnosticos `push_registration` em `app_call_diagnostics`.
 - Backend guarda tokens em `app_push_tokens`.
 - Edge Function `send-call-notification` localiza destinatarios por chamada:
   - chamada para portaria: usuario do `target_portaria_device_id`;
   - chamada para unidade: morador da tentativa atual em `call_attempts`;
   - o usuario iniciador nao recebe a propria notificacao.
+- Edge Function grava diagnosticos `push_notification_dispatch` em `app_call_diagnostics`, incluindo ausencia de token, quantidade de tokens enviados, tickets retornados pelo Expo ou erro de envio.
 - Bundle Android validado com `expo export --platform android`.
+- Em teste real com app em background, nao houve notificacao visual; a instrumentacao acima foi adicionada para separar problema de token, envio Expo ou credencial Android/FCM.
 
 Pendencias de conta/build:
 
@@ -614,10 +618,16 @@ Pendencias de conta/build:
   - origem: `android\app\build\outputs\apk\release\app-release.apk`;
   - tamanho aproximado: 142 MB.
 - Tentativa de instalar via ADB nao encontrou aparelho conectado/autorizado no momento do build; o APK ficou disponivel para instalacao manual.
+- APK local com diagnosticos de push gerado apos o teste sem notificacao em background:
+  - caminho: `C:\Projetos\Confia\apks\confia-interfone-push-diagnostics-20260523.apk`;
+  - inclui status de token em Configuracoes e logs `push_registration`/`push_notification_dispatch`;
+  - nova tentativa de instalar via ADB tambem nao encontrou aparelho conectado/autorizado.
 
 Escopo ainda previsto:
 
 - Validar recebimento real de push em aparelho fisico com APK novo.
+- Validar em Configuracoes se o aparelho mostra `Token registrado`.
+- Validar em `app_call_diagnostics` se aparecem eventos `push_registration` e `push_notification_dispatch`.
 - Tratar receipts do Expo Push Service para desativar tokens invalidos automaticamente.
 - Avaliar CallKit no iOS.
 - Avaliar ConnectionService no Android.

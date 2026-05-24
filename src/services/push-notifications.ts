@@ -3,6 +3,7 @@ import * as Device from 'expo-device';
 import * as Notifications from 'expo-notifications';
 import { Platform } from 'react-native';
 
+import { logCallDiagnostic } from './diagnostics';
 import { supabase } from './supabase';
 import type { AuthenticatedUser } from '../types/domain';
 
@@ -19,24 +20,55 @@ const INCOMING_CALLS_CHANNEL_ID = 'incoming-calls';
 
 export async function registerForPushNotifications(user: AuthenticatedUser) {
   if (!supabase || Platform.OS === 'web') {
+    void logCallDiagnostic({
+      action: 'push_registration',
+      metadata: { reason: !supabase ? 'supabase_not_configured' : 'web_platform' },
+      result: 'SUCCESS',
+      user,
+    });
     return null;
   }
 
   if (!Device.isDevice) {
+    void logCallDiagnostic({
+      action: 'push_registration',
+      metadata: { reason: 'not_physical_device' },
+      result: 'SUCCESS',
+      user,
+    });
     return null;
   }
+
+  void logCallDiagnostic({
+    action: 'push_registration',
+    metadata: { platform: Platform.OS },
+    result: 'STARTED',
+    user,
+  });
 
   await configureAndroidNotificationChannel();
 
   const permission = await ensureNotificationPermission();
 
   if (!permission) {
+    void logCallDiagnostic({
+      action: 'push_registration',
+      metadata: { permission: 'denied' },
+      result: 'ERROR',
+      user,
+    });
     return null;
   }
 
   const projectId = getExpoProjectId();
 
   if (!projectId) {
+    void logCallDiagnostic({
+      action: 'push_registration',
+      errorMessage: 'Expo projectId nao configurado para push notifications.',
+      result: 'ERROR',
+      user,
+    });
     throw new Error('Expo projectId nao configurado para push notifications.');
   }
 
@@ -55,8 +87,29 @@ export async function registerForPushNotifications(user: AuthenticatedUser) {
   });
 
   if (error) {
+    void logCallDiagnostic({
+      action: 'push_registration',
+      errorMessage: error.message,
+      metadata: { permission: 'granted', project_id_present: true },
+      result: 'ERROR',
+      user,
+    });
     throw new Error(error.message);
   }
+
+  void logCallDiagnostic({
+    action: 'push_registration',
+    metadata: {
+      app_build: appBuild,
+      app_version: appVersion,
+      permission: 'granted',
+      platform: Platform.OS,
+      token_length: token.data.length,
+      token_prefix: token.data.slice(0, 18),
+    },
+    result: 'SUCCESS',
+    user,
+  });
 
   return token.data;
 }
