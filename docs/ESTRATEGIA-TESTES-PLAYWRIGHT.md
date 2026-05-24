@@ -656,6 +656,10 @@ A estrategia inicial sera considerada pronta quando conseguirmos rodar, de forma
 - Validar que `app_call_diagnostics` registra `push_registration` com `SUCCESS` no aparelho receptor.
 - Caso Configuracoes mostre erro de notificacao, consultar `app_error_reports` e `app_call_diagnostics`.
 - Em 24/05/2026, a falha confirmada foi falta de Firebase/FCM nativo no APK local: `Default FirebaseApp is not initialized`.
+- APK local com Firebase Android configurado:
+  - APK: `C:\Projetos\Confia\apks\confia-interfone-firebase-20260524.apk`;
+  - validar se Configuracoes muda de erro para `Token registrado`;
+  - se registrar token mas nao entregar push, validar credencial FCM V1 no Expo Push Service.
 - Validar que logout desativa o token em `app_push_tokens`.
 - Validar que chamada morador -> portaria chama `send-call-notification` e envia push para o usuario da portaria.
 - Validar que chamada portaria -> unidade chama `send-call-notification` e envia push para o morador da tentativa atual.

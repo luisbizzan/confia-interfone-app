@@ -609,6 +609,13 @@ Implementado em 23/05/2026:
   - erro capturado em `app_error_reports.source = push-registration`;
   - mensagem tecnica: `Default FirebaseApp is not initialized`;
   - acao necessaria: configurar FCM V1/`google-services.json` no projeto Expo/EAS antes de validar push em background.
+- Configuracao Firebase Android adicionada em 24/05/2026:
+  - pacote Android registrado no Firebase: `br.com.confia.interfone`;
+  - arquivo `google-services.json` adicionado ao app;
+  - `app.json` passa a usar `android.googleServicesFile`;
+  - `expo prebuild` confirmou `com.google.gms:google-services` no Gradle e `android/app/google-services.json`;
+  - APK local gerado: `C:\Projetos\Confia\apks\confia-interfone-firebase-20260524.apk`;
+  - instalacao via ADB ficou pendente porque nenhum device estava visivel/autorizado.
 
 Pendencias de conta/build:
 
@@ -632,6 +639,7 @@ Escopo ainda previsto:
 - Validar recebimento real de push em aparelho fisico com APK novo.
 - Validar em Configuracoes se o aparelho mostra `Token registrado`.
 - Validar em `app_call_diagnostics` se aparecem eventos `push_registration` e `push_notification_dispatch`.
+- Se `Token registrado` funcionar mas o push nao chegar, proximo passo e configurar credencial FCM V1 do lado servidor/Expo para envio via Expo Push Service.
 - Tratar receipts do Expo Push Service para desativar tokens invalidos automaticamente.
 - Avaliar CallKit no iOS.
 - Avaliar ConnectionService no Android.
