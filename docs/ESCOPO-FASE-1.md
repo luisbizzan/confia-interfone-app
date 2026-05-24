@@ -620,6 +620,14 @@ Implementado em 23/05/2026:
   - morador Android;
   - portaria Android.
 - Proximo ponto de validacao passa a ser a entrega efetiva do push em background, nao mais a inicializacao do Firebase no app.
+- Teste de chamada morador -> portaria com portaria em segundo plano nao exibiu notificacao; quando o app voltou ao foreground, a chamada apareceu por polling.
+- Consulta inicial nao encontrou `push_notification_dispatch`, indicando que a chamada da Edge Function de push nao ficou registrada.
+- App passou a gravar `push_dispatch_client` para confirmar se o iniciador conseguiu chamar a Edge Function.
+- Mensagem tecnica `Call not found or not cancellable` passou a ser traduzida para texto amigavel no cancelamento.
+- APK local com diagnostico do disparo pelo iniciador gerado em 24/05/2026:
+  - caminho: `C:\Projetos\Confia\apks\confia-interfone-push-dispatch-diagnostics-20260524.apk`;
+  - foco do teste: chamar portaria/unidade e confirmar em `app_call_diagnostics` se `push_dispatch_client` ficou como `SUCCESS` ou `ERROR`;
+  - instalacao via ADB nao executada porque nenhum aparelho apareceu em `adb devices`.
 
 Pendencias de conta/build:
 
@@ -642,6 +650,7 @@ Escopo ainda previsto:
 
 - Validar recebimento real de push em aparelho fisico com APK novo.
 - Validar em `app_call_diagnostics` se aparecem eventos `push_registration` e `push_notification_dispatch`.
+- Validar se o app iniciador grava `push_dispatch_client` como `SUCCESS` ou `ERROR`.
 - Se `Token registrado` funcionar mas o push nao chegar, proximo passo e configurar credencial FCM V1 do lado servidor/Expo para envio via Expo Push Service.
 - Tratar receipts do Expo Push Service para desativar tokens invalidos automaticamente.
 - Avaliar CallKit no iOS.

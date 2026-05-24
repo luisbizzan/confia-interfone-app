@@ -284,7 +284,7 @@ async function handleGatehouseToUnitCall(
   void logCallDiagnostic({ action: 'gatehouse_call_unit', result: 'STARTED', targetUnitId: unitId, user });
 
   try {
-    const call = await startGatehouseToUnitCall(unitId);
+    const call = await startGatehouseToUnitCall(unitId, user);
     void logCallDiagnostic({
       action: 'gatehouse_call_unit',
       callId: call.id,

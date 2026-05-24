@@ -664,6 +664,16 @@ A estrategia inicial sera considerada pronta quando conseguirmos rodar, de forma
   - `app_push_tokens` possui token ativo para morador Android;
   - `app_push_tokens` possui token ativo para portaria Android;
   - `push_registration` gravou `SUCCESS` para ambos.
+- Teste posterior confirmou que a chamada aparece quando o app receptor volta ao foreground, mas nao chega como push em background.
+- Proximo APK deve validar `push_dispatch_client` no app iniciador:
+  - `SUCCESS`: app chamou a Edge Function;
+  - `ERROR`: registrar mensagem da falha de invocacao;
+  - ausencia do evento: app nao chegou ao bloco de disparo.
+- APK local para esta validacao:
+  - `C:\Projetos\Confia\apks\confia-interfone-push-dispatch-diagnostics-20260524.apk`;
+  - instalar manualmente ou por ADB quando o aparelho estiver visivel;
+  - depois do teste, consultar `app_call_diagnostics` por `push_dispatch_client` e `push_notification_dispatch`.
+- Validar que erro tecnico `Call not found or not cancellable` nao aparece mais para usuario final.
 - Validar que logout desativa o token em `app_push_tokens`.
 - Validar que chamada morador -> portaria chama `send-call-notification` e envia push para o usuario da portaria.
 - Validar que chamada portaria -> unidade chama `send-call-notification` e envia push para o morador da tentativa atual.

@@ -1,25 +1,26 @@
 import { supabase } from './supabase';
-import type { BackendCallRecord, PendingCalls } from '../types/domain';
+import { getErrorMessage, logCallDiagnostic } from './diagnostics';
 import { sendCallNotification } from './push-notifications';
+import type { AuthenticatedUser, BackendCallRecord, PendingCalls } from '../types/domain';
 
 export type StartCallResult = {
   id: string;
   status: string;
 };
 
-export async function startGatehouseToUnitCall(unitId: string): Promise<StartCallResult> {
-  return startCallRpc('start_portaria_call', { p_unit_id: unitId });
+export async function startGatehouseToUnitCall(unitId: string, user?: AuthenticatedUser): Promise<StartCallResult> {
+  return startCallRpc('start_portaria_call', { p_unit_id: unitId }, user, { action: 'push_dispatch_client', targetUnitId: unitId });
 }
 
-export async function startResidentToGatehouseCall(unitId: string): Promise<StartCallResult> {
-  return startCallRpc('start_unit_to_portaria_call', { p_unit_id: unitId });
+export async function startResidentToGatehouseCall(unitId: string, user?: AuthenticatedUser): Promise<StartCallResult> {
+  return startCallRpc('start_unit_to_portaria_call', { p_unit_id: unitId }, user, { action: 'push_dispatch_client', unitId });
 }
 
-export async function startResidentToUnitCall(originUnitId: string, targetUnitId: string): Promise<StartCallResult> {
+export async function startResidentToUnitCall(originUnitId: string, targetUnitId: string, user?: AuthenticatedUser): Promise<StartCallResult> {
   return startCallRpc('start_unit_to_unit_call', {
     p_origin_unit_id: originUnitId,
     p_target_unit_id: targetUnitId,
-  });
+  }, user, { action: 'push_dispatch_client', targetUnitId, unitId: originUnitId });
 }
 
 export async function getMyCallHistory(limit = 25): Promise<BackendCallRecord[]> {
@@ -80,12 +81,63 @@ async function callRpc(functionName: string, params: Record<string, string>): Pr
   return data as StartCallResult;
 }
 
-async function startCallRpc(functionName: string, params: Record<string, string>): Promise<StartCallResult> {
+async function startCallRpc(
+  functionName: string,
+  params: Record<string, string>,
+  user?: AuthenticatedUser,
+  diagnostic?: { action: string; targetUnitId?: string | null; unitId?: string | null },
+): Promise<StartCallResult> {
   const call = await callRpc(functionName, params);
 
-  void sendCallNotification(call.id).catch(() => {
-    // Push is best effort; polling continues to be the source of truth for call state.
-  });
+  void dispatchPushNotification(call.id, user, diagnostic);
 
   return call;
+}
+
+async function dispatchPushNotification(
+  callId: string,
+  user?: AuthenticatedUser,
+  diagnostic?: { action: string; targetUnitId?: string | null; unitId?: string | null },
+) {
+  const startedAt = Date.now();
+
+  if (user && diagnostic) {
+    void logCallDiagnostic({
+      action: diagnostic.action,
+      callId,
+      result: 'STARTED',
+      targetUnitId: diagnostic.targetUnitId,
+      unitId: diagnostic.unitId,
+      user,
+    });
+  }
+
+  try {
+    await sendCallNotification(callId);
+
+    if (user && diagnostic) {
+      void logCallDiagnostic({
+        action: diagnostic.action,
+        callId,
+        durationMs: Date.now() - startedAt,
+        result: 'SUCCESS',
+        targetUnitId: diagnostic.targetUnitId,
+        unitId: diagnostic.unitId,
+        user,
+      });
+    }
+  } catch (error) {
+    if (user && diagnostic) {
+      void logCallDiagnostic({
+        action: diagnostic.action,
+        callId,
+        durationMs: Date.now() - startedAt,
+        errorMessage: getErrorMessage(error),
+        result: 'ERROR',
+        targetUnitId: diagnostic.targetUnitId,
+        unitId: diagnostic.unitId,
+        user,
+      });
+    }
+  }
 }

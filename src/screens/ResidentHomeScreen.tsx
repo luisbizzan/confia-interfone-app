@@ -414,7 +414,7 @@ async function handleResidentToGatehouseCall(
   void logCallDiagnostic({ action: 'resident_call_gatehouse', result: 'STARTED', unitId, user });
 
   try {
-    const call = await startResidentToGatehouseCall(unitId);
+    const call = await startResidentToGatehouseCall(unitId, user);
     void logCallDiagnostic({
       action: 'resident_call_gatehouse',
       callId: call.id,
@@ -570,7 +570,7 @@ async function handleResidentToUnitCall(
   void logCallDiagnostic({ action: 'resident_call_unit', result: 'STARTED', targetUnitId, unitId: originUnitId, user });
 
   try {
-    const call = await startResidentToUnitCall(originUnitId, targetUnitId);
+    const call = await startResidentToUnitCall(originUnitId, targetUnitId, user);
     void logCallDiagnostic({
       action: 'resident_call_unit',
       callId: call.id,
@@ -653,7 +653,7 @@ function buildOptimisticCall({
 function getCallActionErrorMessage(error: unknown) {
   const message = getErrorMessage(error);
 
-  if (/cannot end|cannot cancel|not allowed|not authorized/i.test(message)) {
+  if (/cannot end|cannot cancel|not cancellable|not found|not allowed|not authorized/i.test(message)) {
     return 'Esta chamada ja foi encerrada ou nao pertence mais a este dispositivo. Atualize a tela e tente novamente.';
   }
 
