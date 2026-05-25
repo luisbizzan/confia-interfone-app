@@ -723,6 +723,15 @@ Implementado em 25/05/2026 para a etapa Android de chamada nativa:
   - Manifest Android continuou registrando `io.wazo.callkeep.VoiceConnectionService` e permissoes de chamada;
   - APK local gerado para reteste:
     - `C:\Projetos\Confia\apks\confia-interfone-native-call-newarch-off-20260525.apk`.
+- Validacao em video de 25/05/2026:
+  - push em background chegou no Android;
+  - experiencia ainda apareceu como notificacao comum, nao como chamada estilo WhatsApp;
+  - app abriu a tela de chamada ao tocar na notificacao;
+  - ajuste implementado: registrar categoria de chamada com acoes `Atender` e `Recusar` na notificacao Android, mantendo a chamada nativa/CallKeep como evolucao separada;
+  - Edge Function `send-call-notification` passou a enviar `categoryId = incoming_call`;
+  - versao do app atualizada para `1.0.6 (13)`;
+  - APK local gerado e instalado via ADB no aparelho conectado:
+    - `C:\Projetos\Confia\apks\confia-interfone-notification-actions-20260525.apk`.
 
 Observacao importante:
 

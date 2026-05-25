@@ -2,7 +2,7 @@
   "expo": {
     "name": "Confia Interfone",
     "slug": "confia-interfone-app",
-    "version": "1.0.5",
+    "version": "1.0.6",
     "orientation": "portrait",
     "icon": "./assets/icon.png",
     "userInterfaceStyle": "light",
@@ -20,7 +20,7 @@
       "bitcode": false
     },
     "android": {
-      "versionCode": 12,
+      "versionCode": 13,
       "googleServicesFile": "./google-services.json",
       "softwareKeyboardLayoutMode": "resize",
       "adaptiveIcon": {

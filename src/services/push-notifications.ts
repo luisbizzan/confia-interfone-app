@@ -17,6 +17,9 @@ Notifications.setNotificationHandler({
 });
 
 export const INCOMING_CALLS_CHANNEL_ID = 'incoming-calls-v2';
+export const INCOMING_CALL_CATEGORY_ID = 'incoming_call';
+export const INCOMING_CALL_ANSWER_ACTION_ID = 'ANSWER_CALL';
+export const INCOMING_CALL_DECLINE_ACTION_ID = 'DECLINE_CALL';
 const INCOMING_CALL_SOUND = 'call_ringtone.wav';
 
 export async function registerForPushNotifications(user: AuthenticatedUser) {
@@ -136,12 +139,23 @@ export async function unregisterPushToken(token: string | null) {
   });
 }
 
-export function addNotificationResponseListener(onIncomingCall: () => void) {
+export type IncomingCallNotificationAction = 'answer' | 'decline' | 'open';
+
+export type IncomingCallNotificationResponse = {
+  action: IncomingCallNotificationAction;
+  callId: string | null;
+};
+
+export function addNotificationResponseListener(onIncomingCall: (response: IncomingCallNotificationResponse) => void) {
   return Notifications.addNotificationResponseReceivedListener((response) => {
-    const kind = response.notification.request.content.data?.kind;
+    const data = response.notification.request.content.data;
+    const kind = data?.kind;
 
     if (kind === 'incoming_call') {
-      onIncomingCall();
+      onIncomingCall({
+        action: mapNotificationAction(response.actionIdentifier),
+        callId: getNotificationCallId(data),
+      });
     }
   });
 }
@@ -165,6 +179,24 @@ async function configureAndroidNotificationChannel() {
     return;
   }
 
+  await Notifications.setNotificationCategoryAsync(INCOMING_CALL_CATEGORY_ID, [
+    {
+      buttonTitle: 'Recusar',
+      identifier: INCOMING_CALL_DECLINE_ACTION_ID,
+      options: {
+        isDestructive: true,
+        opensAppToForeground: true,
+      },
+    },
+    {
+      buttonTitle: 'Atender',
+      identifier: INCOMING_CALL_ANSWER_ACTION_ID,
+      options: {
+        opensAppToForeground: true,
+      },
+    },
+  ]);
+
   await Notifications.setNotificationChannelAsync(INCOMING_CALLS_CHANNEL_ID, {
     audioAttributes: {
       contentType: Notifications.AndroidAudioContentType.SONIFICATION,
@@ -177,6 +209,23 @@ async function configureAndroidNotificationChannel() {
     sound: INCOMING_CALL_SOUND,
     vibrationPattern: [0, 700, 350, 700, 350, 700],
   });
+}
+
+function mapNotificationAction(actionIdentifier: string): IncomingCallNotificationAction {
+  if (actionIdentifier === INCOMING_CALL_ANSWER_ACTION_ID) {
+    return 'answer';
+  }
+
+  if (actionIdentifier === INCOMING_CALL_DECLINE_ACTION_ID) {
+    return 'decline';
+  }
+
+  return 'open';
+}
+
+function getNotificationCallId(data: Record<string, unknown> | undefined) {
+  const callId = data?.call_id ?? data?.callId;
+  return typeof callId === 'string' && callId.trim() ? callId.trim() : null;
 }
 
 async function ensureNotificationPermission() {

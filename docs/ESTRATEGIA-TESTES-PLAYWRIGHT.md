@@ -722,3 +722,13 @@ A estrategia inicial sera considerada pronta quando conseguirmos rodar, de forma
   - segundo criterio: abrir Configuracoes e confirmar versao `1.0.5 (12)`;
   - terceiro criterio: logar portaria/morador, registrar tokens e repetir chamada com receptor em background;
   - se abrir sem crash mas CallKeep nao exibir chamada nativa, coletar `app_call_diagnostics` e seguir para ajuste especifico do fluxo nativo.
+- Video de validacao `C:\Projetos\Confia\Videos Testes\WhatsApp Video 2026-05-25 at 19.23.19.mp4`:
+  - confirmar que o push aparece com o app em background;
+  - confirmar que tocar na notificacao abre a tela de chamada;
+  - novo criterio para proximo APK: notificacao deve exibir acoes `Atender` e `Recusar`;
+  - ao tocar em `Atender`, o app deve abrir no Interfone e tentar atender a chamada pelo backend;
+  - se `Recusar` aparecer, validar apenas comportamento visual nesta etapa, pois rejeicao remota completa depende de RPC especifica de recusa.
+- Proximo APK de teste deve mostrar versao `1.0.6 (13)` em Configuracoes e usar push com `categoryId = incoming_call`.
+- APK local para esse teste:
+  - `C:\Projetos\Confia\apks\confia-interfone-notification-actions-20260525.apk`;
+  - instalado via ADB no aparelho conectado em 25/05/2026.

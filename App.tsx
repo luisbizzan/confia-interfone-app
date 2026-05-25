@@ -93,8 +93,18 @@ function AppContent() {
         void reportAppError(error, { source: 'push-registration' });
       });
 
-    const subscription = addNotificationResponseListener(() => {
+    const subscription = addNotificationResponseListener((notification) => {
       setActiveView('intercom');
+
+      if (notification.action === 'answer' && notification.callId) {
+        void handleNotificationAnswer(
+          authState.user,
+          authState.context,
+          buildUnitLabelMap(authState.context, authState.units),
+          setGlobalCallState,
+          notification.callId,
+        );
+      }
     });
 
     return () => {
@@ -301,6 +311,29 @@ function AppContent() {
       {shouldSimulateError ? <ErrorSimulationTrigger /> : null}
     </SafeAreaView>
   );
+}
+
+async function handleNotificationAnswer(
+  user: AuthenticatedUser,
+  context: UserContext,
+  unitLabels: Map<string, string>,
+  setGlobalCallState: (state: GlobalCallState) => void,
+  callId: string,
+) {
+  try {
+    if (user.profile === 'gatehouse') {
+      await answerGatehouseCall(callId);
+    } else {
+      await answerResidentCall(callId, user.id);
+    }
+
+    await refreshGlobalCallState(user, context, unitLabels, setGlobalCallState);
+  } catch (error) {
+    setGlobalCallState({
+      status: 'idle',
+      feedback: `Nao foi possivel atender pela notificacao: ${error instanceof Error ? error.message : 'Abra o interfone e tente novamente.'}`,
+    });
+  }
 }
 
 function NavigationButton({
