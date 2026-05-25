@@ -642,6 +642,9 @@ Implementado em 23/05/2026:
   - proximo passo tecnico: configurar credencial FCM V1 no Expo/EAS;
   - notificacao comum em background depende desta credencial;
   - experiencia de chamada estilo WhatsApp/Telegram continua sendo uma camada nativa separada, ainda nao implementada.
+- Credencial FCM V1 Android configurada no Expo/EAS em 25/05/2026:
+  - service account Firebase vinculada ao app `br.com.confia.interfone`;
+  - proximo teste deve validar chamada com receptor em background e consultar tickets Expo.
 
 Pendencias de conta/build:
 
