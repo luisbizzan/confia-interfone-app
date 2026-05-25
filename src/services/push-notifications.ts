@@ -16,7 +16,8 @@ Notifications.setNotificationHandler({
   }),
 });
 
-const INCOMING_CALLS_CHANNEL_ID = 'incoming-calls';
+export const INCOMING_CALLS_CHANNEL_ID = 'incoming-calls-v2';
+const INCOMING_CALL_SOUND = 'call_ringtone.wav';
 
 export async function registerForPushNotifications(user: AuthenticatedUser) {
   try {
@@ -161,12 +162,16 @@ async function configureAndroidNotificationChannel() {
   }
 
   await Notifications.setNotificationChannelAsync(INCOMING_CALLS_CHANNEL_ID, {
+    audioAttributes: {
+      contentType: Notifications.AndroidAudioContentType.SONIFICATION,
+      usage: Notifications.AndroidAudioUsage.NOTIFICATION_RINGTONE,
+    },
     importance: Notifications.AndroidImportance.MAX,
     lightColor: '#0f8f7f',
     lockscreenVisibility: Notifications.AndroidNotificationVisibility.PUBLIC,
     name: 'Chamadas recebidas',
-    sound: 'default',
-    vibrationPattern: [0, 500, 250, 500],
+    sound: INCOMING_CALL_SOUND,
+    vibrationPattern: [0, 700, 350, 700, 350, 700],
   });
 }
 

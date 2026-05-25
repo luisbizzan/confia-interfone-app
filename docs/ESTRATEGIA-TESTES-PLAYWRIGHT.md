@@ -694,3 +694,6 @@ A estrategia inicial sera considerada pronta quando conseguirmos rodar, de forma
 - Validar que o iniciador da chamada nao recebe a propria notificacao.
 - Validar que, sem token cadastrado, a Edge Function retorna `skipped: true` e nao quebra o fluxo da chamada.
 - Validar que APK/loja possui credenciais FCM/APNs antes de considerar push em segundo plano pronto para apresentacao.
+- Validar no proximo APK que a tela `Chamando` toca som de chamada para o usuario iniciador ate a chamada ser atendida, cancelada ou encerrada.
+- Validar no proximo APK que a notificacao Android usa o canal `incoming-calls-v2` e toca o som customizado de chamada.
+- Validar manualmente que o som da notificacao em background ainda e limitado ao comportamento de notificacao comum; chamada nativa persistente estilo WhatsApp/Telegram fica como suite separada com ConnectionService/CallKit.

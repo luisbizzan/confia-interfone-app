@@ -48,6 +48,14 @@ export function IncomingCallExperience({
 }
 
 function useIncomingCallAlert() {
+  useLoopingCallSound({ vibrate: true });
+}
+
+function useOutgoingCallAlert() {
+  useLoopingCallSound({ vibrate: false });
+}
+
+function useLoopingCallSound({ vibrate }: { vibrate: boolean }) {
   useEffect(() => {
     let ringtone: { loop?: boolean; pause?: () => void; play?: () => void; seekTo?: (seconds: number) => void } | null = null;
 
@@ -55,7 +63,7 @@ function useIncomingCallAlert() {
       const audio = require('expo-audio') as {
         createAudioPlayer?: (source: number) => { loop?: boolean; pause?: () => void; play?: () => void; seekTo?: (seconds: number) => void };
       };
-      ringtone = audio.createAudioPlayer?.(require('../../assets/incoming-call.wav')) ?? null;
+      ringtone = audio.createAudioPlayer?.(require('../../assets/call-ringtone.wav')) ?? null;
 
       if (ringtone) {
         ringtone.loop = true;
@@ -65,21 +73,27 @@ function useIncomingCallAlert() {
       ringtone = null;
     }
 
-    if (Platform.OS === 'android') {
-      Vibration.vibrate([0, 700, 650], true);
-    } else {
-      Vibration.vibrate();
+    if (vibrate) {
+      if (Platform.OS === 'android') {
+        Vibration.vibrate([0, 700, 650], true);
+      } else {
+        Vibration.vibrate();
+      }
     }
 
     return () => {
       ringtone?.pause?.();
       ringtone?.seekTo?.(0);
-      Vibration.cancel();
+      if (vibrate) {
+        Vibration.cancel();
+      }
     };
-  }, []);
+  }, [vibrate]);
 }
 
 export function OutgoingCallExperience({ call, onCancel }: OutgoingCallExperienceProps) {
+  useOutgoingCallAlert();
+
   return (
     <CallStage
       eyebrow="Chamando"

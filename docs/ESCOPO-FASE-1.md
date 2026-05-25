@@ -645,6 +645,15 @@ Implementado em 23/05/2026:
 - Credencial FCM V1 Android configurada no Expo/EAS em 25/05/2026:
   - service account Firebase vinculada ao app `br.com.confia.interfone`;
   - proximo teste deve validar chamada com receptor em background e consultar tickets Expo.
+- Validacao em 25/05/2026 confirmou que a notificacao em background chegou ao Android.
+- Ajuste em 25/05/2026:
+  - criado som local `assets/call-ringtone.wav` com 12 segundos para toque de chamada;
+  - app toca o som em loop enquanto o iniciador fica na tela `Chamando`;
+  - canal Android atualizado para `incoming-calls-v2`, com som customizado, vibracao e uso de audio de ringtone;
+  - som customizado tambem foi copiado para `android/app/src/main/res/raw/call_ringtone.wav` para build local;
+  - versao do app atualizada para `1.0.2 (9)`;
+  - backend deve enviar push no canal `incoming-calls-v2`.
+- Observacao: notificacao comum Android toca o som configurado uma vez. Toque continuo em background no estilo WhatsApp/Telegram exige a proxima camada nativa de chamada, com `ConnectionService`/full-screen intent no Android e CallKit/APNs no iOS.
 
 Pendencias de conta/build:
 
