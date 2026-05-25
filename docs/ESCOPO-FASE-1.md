@@ -632,6 +632,8 @@ Implementado em 23/05/2026:
   - `push_dispatch_client = ERROR`;
   - Edge Function `send-call-notification` retornava `invalid_call_id`;
   - backend foi atualizado para versao 4 da funcao, aceitando formatos alternativos de payload sem exigir novo APK.
+- Novo teste ainda mostrou `invalid_call_id`, agora com `payload_shape.keys = [call_id]`;
+  - backend foi atualizado para versao 5 da funcao, procurando UUID valido dentro do payload recebido.
 
 Pendencias de conta/build:
 
