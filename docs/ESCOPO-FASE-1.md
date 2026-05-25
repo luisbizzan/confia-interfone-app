@@ -713,6 +713,16 @@ Implementado em 25/05/2026 para a etapa Android de chamada nativa:
   - corrigido para `expo-task-manager@14.0.9`, versao esperada pelo SDK 54;
   - versao do app atualizada para `1.0.4 (11)`;
   - APK corrigido gerado em `C:\Projetos\Confia\apks\confia-interfone-native-call-fix-20260525.apk`.
+- Segundo hotfix em 25/05/2026:
+  - APK `1.0.4 (11)` abriu novo crash em `RNCallKeep`;
+  - erro: TurboModule nao conseguiu parsear metodos duplicados `displayIncomingCall`;
+  - causa tecnica: `react-native-callkeep` nao ficou compativel com a New Architecture/TurboModules neste build;
+  - `newArchEnabled` foi desativado no app para usar a ponte React Native classica;
+  - versao do app atualizada para `1.0.5 (12)`;
+  - `expo prebuild --platform android --clean --no-install` confirmou `android/gradle.properties` com `newArchEnabled=false`;
+  - Manifest Android continuou registrando `io.wazo.callkeep.VoiceConnectionService` e permissoes de chamada;
+  - APK local gerado para reteste:
+    - `C:\Projetos\Confia\apks\confia-interfone-native-call-newarch-off-20260525.apk`.
 
 Observacao importante:
 

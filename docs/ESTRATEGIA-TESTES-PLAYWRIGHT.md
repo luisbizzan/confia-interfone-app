@@ -710,3 +710,15 @@ A estrategia inicial sera considerada pronta quando conseguirmos rodar, de forma
   - versao esperada em Configuracoes: `1.0.4 (11)`;
   - primeiro criterio: app abrir sem tela de erro `AnyTypeCache`;
   - segundo criterio: login registrar token e permitir teste de chamada em background.
+- APK `1.0.4 (11)` tambem nao deve mais ser usado: mostrou crash de `RNCallKeep` com TurboModules/New Architecture.
+- Proximo APK deve validar:
+  - `newArchEnabled = false`;
+  - versao esperada em Configuracoes: `1.0.5 (12)`;
+  - app abre sem erro de `RNCallKeep`;
+  - login registra token e permite retomar teste de chamada nativa Android.
+- APK local de reteste gerado em 25/05/2026:
+  - `C:\Projetos\Confia\apks\confia-interfone-native-call-newarch-off-20260525.apk`;
+  - primeiro criterio: instalacao limpa e abertura sem crash `Module exports two methods ... displayIncomingCall`;
+  - segundo criterio: abrir Configuracoes e confirmar versao `1.0.5 (12)`;
+  - terceiro criterio: logar portaria/morador, registrar tokens e repetir chamada com receptor em background;
+  - se abrir sem crash mas CallKeep nao exibir chamada nativa, coletar `app_call_diagnostics` e seguir para ajuste especifico do fluxo nativo.
