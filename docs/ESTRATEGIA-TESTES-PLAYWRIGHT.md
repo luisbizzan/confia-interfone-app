@@ -653,6 +653,7 @@ A estrategia inicial sera considerada pronta quando conseguirmos rodar, de forma
   - instalacao via ADB ficou pendente porque nenhum device estava visivel/autorizado no momento da tentativa.
 - Validar que login em aparelho fisico solicita permissao de notificacao e grava token em `app_push_tokens`.
 - Validar que Configuracoes exibe `Token registrado` quando o aparelho conseguiu criar token de push.
+- Validar que o novo login com APK `1.0.3 (10)` grava tambem `native_push_token` e `native_push_provider = fcm` em `app_push_tokens`.
 - Validar que `app_call_diagnostics` registra `push_registration` com `SUCCESS` no aparelho receptor.
 - Caso Configuracoes mostre erro de notificacao, consultar `app_error_reports` e `app_call_diagnostics`.
 - Em 24/05/2026, a falha confirmada foi falta de Firebase/FCM nativo no APK local: `Default FirebaseApp is not initialized`.
@@ -697,3 +698,9 @@ A estrategia inicial sera considerada pronta quando conseguirmos rodar, de forma
 - Validar no proximo APK que a tela `Chamando` toca som de chamada para o usuario iniciador ate a chamada ser atendida, cancelada ou encerrada.
 - Validar no proximo APK que a notificacao Android usa o canal `incoming-calls-v2` e toca o som customizado de chamada.
 - Validar manualmente que o som da notificacao em background ainda e limitado ao comportamento de notificacao comum; chamada nativa persistente estilo WhatsApp/Telegram fica como suite separada com ConnectionService/CallKit.
+- Validar APK Android `C:\Projetos\Confia\apks\confia-interfone-native-call-20260525.apk`:
+  - logar portaria e morador para registrar token nativo;
+  - colocar receptor em background;
+  - iniciar chamada em outro aparelho;
+  - confirmar se CallKeep/tela nativa abre ou se o app vem para foreground na area de Interfone;
+  - consultar `app_call_diagnostics.metadata.fcm_results` na acao `push_notification_dispatch`.

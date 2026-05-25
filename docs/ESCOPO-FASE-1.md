@@ -647,7 +647,7 @@ Implementado em 23/05/2026:
   - proximo teste deve validar chamada com receptor em background e consultar tickets Expo.
 - Validacao em 25/05/2026 confirmou que a notificacao em background chegou ao Android.
 - Ajuste em 25/05/2026:
-  - criado som local `assets/call-ringtone.wav` com 12 segundos para toque de chamada;
+  - criado som local `assets/call_ringtone.wav` com 12 segundos para toque de chamada;
   - app toca o som em loop enquanto o iniciador fica na tela `Chamando`;
   - canal Android atualizado para `incoming-calls-v2`, com som customizado, vibracao e uso de audio de ringtone;
   - som customizado tambem foi copiado para `android/app/src/main/res/raw/call_ringtone.wav` para build local;
@@ -686,6 +686,32 @@ Escopo ainda previsto:
 ### Fase 4 - Publicacao oficial e hardening
 
 Objetivo: preparar app para lojas oficiais e uso piloto.
+
+Implementado em 25/05/2026 para a etapa Android de chamada nativa:
+
+- Dependencias adicionadas:
+  - `react-native-callkeep`;
+  - `expo-task-manager`.
+- Criado config plugin `plugins/with-confia-android-calls.js` para registrar o `VoiceConnectionService` do CallKeep no Android Manifest.
+- Permissoes Android adicionadas para chamada nativa:
+  - `MANAGE_OWN_CALLS`;
+  - `READ_CALL_LOG`;
+  - `USE_FULL_SCREEN_INTENT`;
+  - `FOREGROUND_SERVICE`;
+  - `FOREGROUND_SERVICE_PHONE_CALL`;
+  - `FOREGROUND_SERVICE_MICROPHONE`.
+- App passou a registrar tambem o token nativo FCM (`getDevicePushTokenAsync`) junto com o `ExpoPushToken`.
+- Criada tarefa de background `CONFIA_NATIVE_CALL_BACKGROUND_TASK` para receber push data-only e chamar `RNCallKeep.displayIncomingCall`.
+- CallKeep configurado em modo Android self-managed, com callback de atender trazendo o app para foreground e abrindo a area de Interfone.
+- Versao do app atualizada para `1.0.3 (10)`.
+- APK local gerado:
+  - `C:\Projetos\Confia\apks\confia-interfone-native-call-20260525.apk`;
+  - instalacao via ADB nao executada porque nenhum aparelho apareceu em `adb devices`.
+
+Observacao importante:
+
+- Esta etapa e a primeira base nativa Android. O teste esperado e verificar se, com o app em background, a mensagem FCM data-only aciona o CallKeep e traz o app para a tela de Interfone.
+- O refinamento seguinte e tratar aceitar/recusar diretamente na UI nativa e sincronizar cancelamento/encerramento remoto da chamada nativa.
 
 Escopo previsto:
 

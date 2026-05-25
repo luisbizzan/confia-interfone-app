@@ -20,6 +20,7 @@ import {
 } from './src/services/call-ownership';
 import { loadCurrentAuthState, signInWithEmail, signOut, type LoadedAuthState } from './src/services/auth';
 import { clearErrorReportingContext, registerGlobalErrorHandlers, reportAppError, setErrorReportingContext } from './src/services/error-reporting';
+import { initializeNativeCallIntegration } from './src/services/native-calls';
 import { addNotificationResponseListener, registerForPushNotifications, unregisterPushToken } from './src/services/push-notifications';
 import { theme } from './src/theme/theme';
 import type { AuthenticatedUser, BackendCallRecord, CallRecord, PendingPortariaCall, PendingUnitCall, UnitDirectoryItem, UserContext } from './src/types/domain';
@@ -51,6 +52,9 @@ function AppContent() {
 
   useEffect(() => {
     registerGlobalErrorHandlers();
+    void initializeNativeCallIntegration(() => setActiveView('intercom')).catch((error) => {
+      void reportAppError(error, { source: 'native-call-integration' });
+    });
   }, []);
 
   useEffect(() => {

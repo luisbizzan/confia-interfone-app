@@ -63,7 +63,7 @@ function useLoopingCallSound({ vibrate }: { vibrate: boolean }) {
       const audio = require('expo-audio') as {
         createAudioPlayer?: (source: number) => { loop?: boolean; pause?: () => void; play?: () => void; seekTo?: (seconds: number) => void };
       };
-      ringtone = audio.createAudioPlayer?.(require('../../assets/call-ringtone.wav')) ?? null;
+      ringtone = audio.createAudioPlayer?.(require('../../assets/call_ringtone.wav')) ?? null;
 
       if (ringtone) {
         ringtone.loop = true;

@@ -75,6 +75,7 @@ export async function registerForPushNotifications(user: AuthenticatedUser) {
     }
 
     const token = await Notifications.getExpoPushTokenAsync({ projectId });
+    const nativeToken = await Notifications.getDevicePushTokenAsync().catch(() => null);
     const appVersion = Constants.nativeAppVersion ?? Constants.expoConfig?.version ?? '1.0.0';
     const appBuild = Constants.nativeBuildVersion ?? 'preview';
 
@@ -84,6 +85,8 @@ export async function registerForPushNotifications(user: AuthenticatedUser) {
       p_device_id: Constants.sessionId ?? null,
       p_device_name: Device.deviceName ?? `${Platform.OS} device`,
       p_expo_push_token: token.data,
+      p_native_push_provider: nativeToken?.type ?? null,
+      p_native_push_token: typeof nativeToken?.data === 'string' ? nativeToken.data : null,
       p_platform: Platform.OS,
       p_profile: user.profile,
     });
@@ -99,6 +102,7 @@ export async function registerForPushNotifications(user: AuthenticatedUser) {
         app_version: appVersion,
         permission: 'granted',
         platform: Platform.OS,
+        native_token_length: typeof nativeToken?.data === 'string' ? nativeToken.data.length : null,
         token_length: token.data.length,
         token_prefix: token.data.slice(0, 18),
       },
