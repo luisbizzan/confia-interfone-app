@@ -634,6 +634,8 @@ Implementado em 23/05/2026:
   - backend foi atualizado para versao 4 da funcao, aceitando formatos alternativos de payload sem exigir novo APK.
 - Novo teste ainda mostrou `invalid_call_id`, agora com `payload_shape.keys = [call_id]`;
   - backend foi atualizado para versao 5 da funcao, procurando UUID valido dentro do payload recebido.
+- Como a falha persistiu, backend foi atualizado para versao 6 da funcao:
+  - se o payload nao trouxer UUID legivel, a funcao usa a chamada `RINGING` mais recente do usuario autenticado como fallback.
 
 Pendencias de conta/build:
 
