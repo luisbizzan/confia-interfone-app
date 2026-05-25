@@ -707,6 +707,12 @@ Implementado em 25/05/2026 para a etapa Android de chamada nativa:
 - APK local gerado:
   - `C:\Projetos\Confia\apks\confia-interfone-native-call-20260525.apk`;
   - instalacao via ADB nao executada porque nenhum aparelho apareceu em `adb devices`.
+- Hotfix em 25/05/2026:
+  - APK `1.0.3 (10)` quebrou no bootstrap nativo com `NoClassDefFoundError: expo.modules.kotlin.types.AnyTypeCache`;
+  - causa: `expo-task-manager` foi instalado como `56.0.14`, incompatível com Expo SDK 54;
+  - corrigido para `expo-task-manager@14.0.9`, versao esperada pelo SDK 54;
+  - versao do app atualizada para `1.0.4 (11)`;
+  - APK corrigido gerado em `C:\Projetos\Confia\apks\confia-interfone-native-call-fix-20260525.apk`.
 
 Observacao importante:
 

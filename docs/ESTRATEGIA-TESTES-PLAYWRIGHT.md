@@ -704,3 +704,9 @@ A estrategia inicial sera considerada pronta quando conseguirmos rodar, de forma
   - iniciar chamada em outro aparelho;
   - confirmar se CallKeep/tela nativa abre ou se o app vem para foreground na area de Interfone;
   - consultar `app_call_diagnostics.metadata.fcm_results` na acao `push_notification_dispatch`.
+- APK `C:\Projetos\Confia\apks\confia-interfone-native-call-20260525.apk` nao deve mais ser usado: apresentou crash nativo por incompatibilidade do `expo-task-manager`.
+- Usar como APK de referencia para o proximo teste:
+  - `C:\Projetos\Confia\apks\confia-interfone-native-call-fix-20260525.apk`;
+  - versao esperada em Configuracoes: `1.0.4 (11)`;
+  - primeiro criterio: app abrir sem tela de erro `AnyTypeCache`;
+  - segundo criterio: login registrar token e permitir teste de chamada em background.
