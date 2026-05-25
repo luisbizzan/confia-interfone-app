@@ -636,6 +636,12 @@ Implementado em 23/05/2026:
   - backend foi atualizado para versao 5 da funcao, procurando UUID valido dentro do payload recebido.
 - Como a falha persistiu, backend foi atualizado para versao 6 da funcao:
   - se o payload nao trouxer UUID legivel, a funcao usa a chamada `RINGING` mais recente do usuario autenticado como fallback.
+- Teste em 25/05/2026 avancou ate o Expo Push Service:
+  - `push_dispatch_client = SUCCESS`;
+  - `push_notification_dispatch = SUCCESS`, porem o ticket retornou `InvalidCredentials`;
+  - proximo passo tecnico: configurar credencial FCM V1 no Expo/EAS;
+  - notificacao comum em background depende desta credencial;
+  - experiencia de chamada estilo WhatsApp/Telegram continua sendo uma camada nativa separada, ainda nao implementada.
 
 Pendencias de conta/build:
 

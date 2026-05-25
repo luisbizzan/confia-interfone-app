@@ -680,6 +680,9 @@ A estrategia inicial sera considerada pronta quando conseguirmos rodar, de forma
 - Teste seguinte confirmou que o payload continha a chave `call_id`, mas ainda falhava na validacao de UUID;
   - Edge Function foi ajustada para procurar UUID valido em valores aninhados do payload.
 - Como a falha persistiu em device real, o backend passou a usar fallback por chamada `RINGING` recente do usuario autenticado quando o payload de push vier ilegivel.
+- Teste posterior avancou ate o Expo Push Service, mas o ticket retornou `InvalidCredentials`;
+  - teste de background so deve ser considerado valido depois de configurar FCM V1 no Expo/EAS;
+  - comportamento estilo chamada do WhatsApp/Telegram deve entrar como suite nativa separada, porque exige CallKit/ConnectionService ou mecanismo equivalente.
 - Validar que erro tecnico `Call not found or not cancellable` nao aparece mais para usuario final.
 - Validar que logout desativa o token em `app_push_tokens`.
 - Validar que chamada morador -> portaria chama `send-call-notification` e envia push para o usuario da portaria.
