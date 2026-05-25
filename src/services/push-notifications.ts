@@ -22,6 +22,43 @@ export const INCOMING_CALL_ANSWER_ACTION_ID = 'ANSWER_CALL';
 export const INCOMING_CALL_DECLINE_ACTION_ID = 'DECLINE_CALL';
 const INCOMING_CALL_SOUND = 'call_ringtone.wav';
 
+export async function configureIncomingCallNotifications() {
+  if (Platform.OS !== 'android') {
+    return;
+  }
+
+  await Notifications.setNotificationCategoryAsync(INCOMING_CALL_CATEGORY_ID, [
+    {
+      buttonTitle: 'Recusar',
+      identifier: INCOMING_CALL_DECLINE_ACTION_ID,
+      options: {
+        isDestructive: true,
+        opensAppToForeground: true,
+      },
+    },
+    {
+      buttonTitle: 'Atender',
+      identifier: INCOMING_CALL_ANSWER_ACTION_ID,
+      options: {
+        opensAppToForeground: true,
+      },
+    },
+  ]);
+
+  await Notifications.setNotificationChannelAsync(INCOMING_CALLS_CHANNEL_ID, {
+    audioAttributes: {
+      contentType: Notifications.AndroidAudioContentType.SONIFICATION,
+      usage: Notifications.AndroidAudioUsage.NOTIFICATION_RINGTONE,
+    },
+    importance: Notifications.AndroidImportance.MAX,
+    lightColor: '#0f8f7f',
+    lockscreenVisibility: Notifications.AndroidNotificationVisibility.PUBLIC,
+    name: 'Chamadas recebidas',
+    sound: INCOMING_CALL_SOUND,
+    vibrationPattern: [0, 700, 350, 700, 350, 700],
+  });
+}
+
 export async function registerForPushNotifications(user: AuthenticatedUser) {
   try {
     if (!supabase || Platform.OS === 'web') {
@@ -51,7 +88,7 @@ export async function registerForPushNotifications(user: AuthenticatedUser) {
       user,
     });
 
-    await configureAndroidNotificationChannel();
+    await configureIncomingCallNotifications();
 
     const permission = await ensureNotificationPermission();
 
@@ -172,43 +209,6 @@ export async function sendCallNotification(callId: string) {
   if (error) {
     throw new Error(error.message);
   }
-}
-
-async function configureAndroidNotificationChannel() {
-  if (Platform.OS !== 'android') {
-    return;
-  }
-
-  await Notifications.setNotificationCategoryAsync(INCOMING_CALL_CATEGORY_ID, [
-    {
-      buttonTitle: 'Recusar',
-      identifier: INCOMING_CALL_DECLINE_ACTION_ID,
-      options: {
-        isDestructive: true,
-        opensAppToForeground: true,
-      },
-    },
-    {
-      buttonTitle: 'Atender',
-      identifier: INCOMING_CALL_ANSWER_ACTION_ID,
-      options: {
-        opensAppToForeground: true,
-      },
-    },
-  ]);
-
-  await Notifications.setNotificationChannelAsync(INCOMING_CALLS_CHANNEL_ID, {
-    audioAttributes: {
-      contentType: Notifications.AndroidAudioContentType.SONIFICATION,
-      usage: Notifications.AndroidAudioUsage.NOTIFICATION_RINGTONE,
-    },
-    importance: Notifications.AndroidImportance.MAX,
-    lightColor: '#0f8f7f',
-    lockscreenVisibility: Notifications.AndroidNotificationVisibility.PUBLIC,
-    name: 'Chamadas recebidas',
-    sound: INCOMING_CALL_SOUND,
-    vibrationPattern: [0, 700, 350, 700, 350, 700],
-  });
 }
 
 function mapNotificationAction(actionIdentifier: string): IncomingCallNotificationAction {

@@ -732,6 +732,20 @@ Implementado em 25/05/2026 para a etapa Android de chamada nativa:
   - versao do app atualizada para `1.0.6 (13)`;
   - APK local gerado e instalado via ADB no aparelho conectado:
     - `C:\Projetos\Confia\apks\confia-interfone-notification-actions-20260525.apk`.
+- Ajuste de usabilidade em 25/05/2026:
+  - print em aparelho Samsung mostrou a navegacao inferior do app sobreposta pela barra de navegacao do Android;
+  - `edgeToEdgeEnabled` foi desativado no Android para evitar desenho sob a barra do sistema;
+  - barra inferior ganhou respiro maior e botoes com altura minima de toque;
+  - versao do app atualizada para `1.0.7 (14)`.
+- Estabilizacao em 25/05/2026:
+  - video mostrou que a notificacao chega, mas o comportamento com o app aberto podia minimizar/fechar o app;
+  - inicializacao do CallKeep foi removida temporariamente do boot do app para evitar interferencia no lifecycle;
+  - app continua registrando canal/categoria de notificacao de chamada no bootstrap e no login;
+  - versao do app atualizada para `1.0.8 (15)`;
+  - APK local gerado:
+    - `C:\Projetos\Confia\apks\confia-interfone-stable-notification-20260525.apk`;
+  - instalacao via ADB nao executada porque nenhum aparelho apareceu conectado no momento;
+  - chamada nativa completa permanece planejada como etapa separada com ConnectionService/CallKeep bem isolado.
 
 Observacao importante:
 

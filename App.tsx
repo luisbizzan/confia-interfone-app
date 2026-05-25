@@ -20,8 +20,7 @@ import {
 } from './src/services/call-ownership';
 import { loadCurrentAuthState, signInWithEmail, signOut, type LoadedAuthState } from './src/services/auth';
 import { clearErrorReportingContext, registerGlobalErrorHandlers, reportAppError, setErrorReportingContext } from './src/services/error-reporting';
-import { initializeNativeCallIntegration } from './src/services/native-calls';
-import { addNotificationResponseListener, registerForPushNotifications, unregisterPushToken } from './src/services/push-notifications';
+import { addNotificationResponseListener, configureIncomingCallNotifications, registerForPushNotifications, unregisterPushToken } from './src/services/push-notifications';
 import { theme } from './src/theme/theme';
 import type { AuthenticatedUser, BackendCallRecord, CallRecord, PendingPortariaCall, PendingUnitCall, UnitDirectoryItem, UserContext } from './src/types/domain';
 
@@ -52,8 +51,8 @@ function AppContent() {
 
   useEffect(() => {
     registerGlobalErrorHandlers();
-    void initializeNativeCallIntegration(() => setActiveView('intercom')).catch((error) => {
-      void reportAppError(error, { source: 'native-call-integration' });
+    void configureIncomingCallNotifications().catch((error) => {
+      void reportAppError(error, { source: 'notification-bootstrap' });
     });
   }, []);
 
@@ -638,7 +637,7 @@ const styles = StyleSheet.create({
   content: {
     flexGrow: 1,
     padding: theme.spacing.lg,
-    paddingBottom: theme.spacing.xxl,
+    paddingBottom: Platform.OS === 'android' ? 104 : theme.spacing.xxl,
   },
   loading: {
     alignItems: 'center',
@@ -657,11 +656,14 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     justifyContent: 'space-around',
     paddingHorizontal: theme.spacing.sm,
-    paddingVertical: theme.spacing.sm,
+    paddingBottom: Platform.OS === 'android' ? 24 : theme.spacing.sm,
+    paddingTop: theme.spacing.sm,
   },
   navigationButton: {
     alignItems: 'center',
     gap: 2,
+    justifyContent: 'center',
+    minHeight: 52,
     minWidth: 76,
     paddingHorizontal: theme.spacing.sm,
     paddingVertical: theme.spacing.xs,

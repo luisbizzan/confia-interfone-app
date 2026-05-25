@@ -732,3 +732,15 @@ A estrategia inicial sera considerada pronta quando conseguirmos rodar, de forma
 - APK local para esse teste:
   - `C:\Projetos\Confia\apks\confia-interfone-notification-actions-20260525.apk`;
   - instalado via ADB no aparelho conectado em 25/05/2026.
+- Criterio visual adicional para o proximo APK:
+  - versao esperada em Configuracoes: `1.0.7 (14)`;
+  - barra inferior deve ficar acima da navegacao do Android;
+  - botoes `Inicio`, `Interfone` e `Configuracoes` devem aceitar toque direto sem disputar com os botoes do sistema;
+  - validar em tela de portaria e morador, principalmente em aparelho Samsung com navegacao por botoes.
+- Novo criterio de estabilidade para o proximo APK:
+  - versao esperada em Configuracoes: `1.0.8 (15)`;
+  - APK local: `C:\Projetos\Confia\apks\confia-interfone-stable-notification-20260525.apk`;
+  - com o app aberto, receber chamada nao deve minimizar/fechar o app;
+  - com o app em background, receber chamada deve mostrar notificacao e abrir a tela de Interfone ao tocar;
+  - confirmar se as acoes `Atender` e `Recusar` aparecem ao expandir a notificacao;
+  - se as acoes nao aparecerem no heads-up compacto da Samsung, registrar como limite de notificacao comum e seguir para etapa nativa ConnectionService.
