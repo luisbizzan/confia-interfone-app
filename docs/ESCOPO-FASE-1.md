@@ -628,6 +628,10 @@ Implementado em 23/05/2026:
   - caminho: `C:\Projetos\Confia\apks\confia-interfone-push-dispatch-diagnostics-20260524.apk`;
   - foco do teste: chamar portaria/unidade e confirmar em `app_call_diagnostics` se `push_dispatch_client` ficou como `SUCCESS` ou `ERROR`;
   - instalacao via ADB nao executada porque nenhum aparelho apareceu em `adb devices`.
+- Teste posterior com este APK confirmou:
+  - `push_dispatch_client = ERROR`;
+  - Edge Function `send-call-notification` retornava `invalid_call_id`;
+  - backend foi atualizado para versao 4 da funcao, aceitando formatos alternativos de payload sem exigir novo APK.
 
 Pendencias de conta/build:
 

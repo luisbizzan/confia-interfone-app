@@ -673,6 +673,10 @@ A estrategia inicial sera considerada pronta quando conseguirmos rodar, de forma
   - `C:\Projetos\Confia\apks\confia-interfone-push-dispatch-diagnostics-20260524.apk`;
   - instalar manualmente ou por ADB quando o aparelho estiver visivel;
   - depois do teste, consultar `app_call_diagnostics` por `push_dispatch_client` e `push_notification_dispatch`.
+- Resultado do teste com este APK:
+  - app iniciador gravou `push_dispatch_client = ERROR`;
+  - backend gravou `push_notification_dispatch = ERROR` com `reason = invalid_call_id`;
+  - Edge Function foi ajustada no backend para aceitar payloads alternativos sem novo build nativo.
 - Validar que erro tecnico `Call not found or not cancellable` nao aparece mais para usuario final.
 - Validar que logout desativa o token em `app_push_tokens`.
 - Validar que chamada morador -> portaria chama `send-call-notification` e envia push para o usuario da portaria.
