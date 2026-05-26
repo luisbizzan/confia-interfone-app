@@ -2,7 +2,7 @@
   "expo": {
     "name": "Confia Interfone",
     "slug": "confia-interfone-app",
-    "version": "1.0.8",
+    "version": "1.0.9",
     "orientation": "portrait",
     "icon": "./assets/icon.png",
     "userInterfaceStyle": "light",
@@ -20,7 +20,7 @@
       "bitcode": false
     },
     "android": {
-      "versionCode": 15,
+      "versionCode": 16,
       "googleServicesFile": "./google-services.json",
       "softwareKeyboardLayoutMode": "resize",
       "adaptiveIcon": {
@@ -39,14 +39,7 @@
         "android.permission.SYSTEM_ALERT_WINDOW",
         "android.permission.WAKE_LOCK",
         "android.permission.BLUETOOTH",
-        "android.permission.CALL_PHONE",
         "android.permission.FOREGROUND_SERVICE",
-        "android.permission.FOREGROUND_SERVICE_MICROPHONE",
-        "android.permission.FOREGROUND_SERVICE_PHONE_CALL",
-        "android.permission.MANAGE_OWN_CALLS",
-        "android.permission.READ_CALL_LOG",
-        "android.permission.READ_PHONE_STATE",
-        "android.permission.USE_FULL_SCREEN_INTENT",
         "android.permission.VIBRATE"
       ],
       "predictiveBackGestureEnabled": false
@@ -76,8 +69,7 @@
             "./assets/call_ringtone.wav"
           ]
         }
-      ],
-      "./plugins/with-confia-android-calls"
+      ]
     ],
     "owner": "luisbizzan"
   }

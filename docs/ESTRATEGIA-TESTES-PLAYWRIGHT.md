@@ -744,3 +744,10 @@ A estrategia inicial sera considerada pronta quando conseguirmos rodar, de forma
   - com o app em background, receber chamada deve mostrar notificacao e abrir a tela de Interfone ao tocar;
   - confirmar se as acoes `Atender` e `Recusar` aparecem ao expandir a notificacao;
   - se as acoes nao aparecerem no heads-up compacto da Samsung, registrar como limite de notificacao comum e seguir para etapa nativa ConnectionService.
+- Correcao para novo APK:
+  - versao esperada em Configuracoes: `1.0.9 (16)`;
+  - APK local: `C:\Projetos\Confia\apks\confia-interfone-no-callkeep-20260525.apk`;
+  - o APK nao deve registrar `VoiceConnectionService` no Manifest;
+  - o app nao deve acionar `CONFIA_NATIVE_CALL_BACKGROUND_TASK`;
+  - repetir teste com app aberto recebendo chamada e confirmar que ele nao fecha/minimiza;
+  - repetir teste com app em background e confirmar que a notificacao comum continua chegando.

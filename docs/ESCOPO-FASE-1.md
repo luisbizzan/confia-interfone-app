@@ -746,6 +746,17 @@ Implementado em 25/05/2026 para a etapa Android de chamada nativa:
     - `C:\Projetos\Confia\apks\confia-interfone-stable-notification-20260525.apk`;
   - instalacao via ADB nao executada porque nenhum aparelho apareceu conectado no momento;
   - chamada nativa completa permanece planejada como etapa separada com ConnectionService/CallKeep bem isolado.
+- Correcao adicional em 25/05/2026:
+  - crash em Xiaomi/Samsung apontou `VoiceConnectionService` do CallKeep tentando acessar `READ_PHONE_NUMBERS`;
+  - causa: `index.ts` ainda registrava a tarefa nativa `CONFIA_NATIVE_CALL_BACKGROUND_TASK`, mantendo o caminho CallKeep ativo;
+  - removido o registro da tarefa nativa no bootstrap;
+  - removido temporariamente o plugin `with-confia-android-calls` do build estavel;
+  - removidas permissoes Android de telecom/phone account do APK estavel;
+  - versao do app atualizada para `1.0.9 (16)`;
+  - prebuild confirmou Manifest sem `VoiceConnectionService` e sem permissoes de phone account;
+  - APK local gerado:
+    - `C:\Projetos\Confia\apks\confia-interfone-no-callkeep-20260525.apk`;
+  - instalacao via ADB nao executada porque nenhum aparelho apareceu conectado no momento.
 
 Observacao importante:
 
