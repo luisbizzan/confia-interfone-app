@@ -751,3 +751,9 @@ A estrategia inicial sera considerada pronta quando conseguirmos rodar, de forma
   - o app nao deve acionar `CONFIA_NATIVE_CALL_BACKGROUND_TASK`;
   - repetir teste com app aberto recebendo chamada e confirmar que ele nao fecha/minimiza;
   - repetir teste com app em background e confirmar que a notificacao comum continua chegando.
+- Criterio para som de notificacao:
+  - versao esperada em Configuracoes: `1.0.10 (17)`;
+  - APK local: `C:\Projetos\Confia\apks\confia-interfone-sound-channel-v3-20260525.apk`;
+  - push de chamada deve usar canal Android `incoming-calls-v3`;
+  - com app em background, validar vibracao e som `call_ringtone.wav`;
+  - se continuar sem som, abrir configuracoes do app no Android e conferir se o canal `Chamadas recebidas` esta permitido com som.

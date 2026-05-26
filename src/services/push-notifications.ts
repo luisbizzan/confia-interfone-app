@@ -16,7 +16,7 @@ Notifications.setNotificationHandler({
   }),
 });
 
-export const INCOMING_CALLS_CHANNEL_ID = 'incoming-calls-v2';
+export const INCOMING_CALLS_CHANNEL_ID = 'incoming-calls-v3';
 export const INCOMING_CALL_CATEGORY_ID = 'incoming_call';
 export const INCOMING_CALL_ANSWER_ACTION_ID = 'ANSWER_CALL';
 export const INCOMING_CALL_DECLINE_ACTION_ID = 'DECLINE_CALL';

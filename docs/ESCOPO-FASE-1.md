@@ -757,6 +757,15 @@ Implementado em 25/05/2026 para a etapa Android de chamada nativa:
   - APK local gerado:
     - `C:\Projetos\Confia\apks\confia-interfone-no-callkeep-20260525.apk`;
   - instalacao via ADB nao executada porque nenhum aparelho apareceu conectado no momento.
+- Ajuste de som em background:
+  - apos estabilizar sem CallKeep, notificacao em segundo plano ficou apenas vibrando;
+  - causa provavel: Android preservou a configuracao antiga do canal `incoming-calls-v2`, e canais existentes nao recebem alteracoes de som de forma confiavel;
+  - criado novo canal `incoming-calls-v3` para forcar configuracao limpa com `call_ringtone.wav`;
+  - versao do app atualizada para `1.0.10 (17)`;
+  - Edge Function `send-call-notification` tambem passou a enviar `channelId = incoming-calls-v3`;
+  - APK local gerado:
+    - `C:\Projetos\Confia\apks\confia-interfone-sound-channel-v3-20260525.apk`;
+  - instalacao via ADB nao executada porque nenhum aparelho apareceu conectado no momento.
 
 Observacao importante:
 
