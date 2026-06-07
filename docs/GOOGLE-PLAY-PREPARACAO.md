@@ -148,6 +148,7 @@ Status em 07/06/2026:
 - [x] Package Android definitivo: `br.com.confia.system`.
 - [x] Identidade visual inicial aplicada no app.
 - [x] Login real via Supabase Auth.
+- [x] Recuperacao de senha por e-mail via Supabase Auth.
 - [x] Separacao de ambientes staging/develop e production.
 - [x] APK local de testes apontando para staging/develop.
 - [x] Backend com regras de condominio, portaria, unidade e morador.

@@ -2,6 +2,7 @@
   "expo": {
     "name": "Confia System",
     "slug": "confia-interfone-app",
+    "scheme": "confiasystem",
     "version": "1.0.20",
     "orientation": "portrait",
     "icon": "./assets/confia-system-mark-preview.png",

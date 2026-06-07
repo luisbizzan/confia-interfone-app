@@ -1070,3 +1070,24 @@ A estrategia inicial sera considerada pronta quando conseguirmos rodar, de forma
       - validar que o preview do anexo aparece acima do composer;
       - validar que a lista de mensagens continua rolavel independentemente do anexo pendente;
       - enviar o anexo com ou sem legenda e validar que o composer permanece fixo.
+  - recuperacao de senha 07/06/2026:
+    - teste web de solicitacao:
+      - abrir tela de login;
+      - tocar em `Esqueci minha senha`;
+      - informar e-mail cadastrado;
+      - validar mensagem de instrucoes enviadas por e-mail;
+      - validar que erro de rede ou Supabase indisponivel exibe mensagem amigavel.
+    - teste de nova senha:
+      - simular abertura do app com URL `confiasystem://reset-password` contendo token/codigo valido do Supabase;
+      - validar que a tela abre no modo `Salvar nova senha`;
+      - testar senha fraca e validar bloqueio pelos criterios exibidos;
+      - testar confirmacao divergente e validar mensagem de erro;
+      - testar senha forte e validar conclusao com logout da sessao de recuperacao.
+    - teste de configuracao por ambiente:
+      - Supabase staging deve conter `confiasystem://reset-password` em Redirect URLs;
+      - Supabase production deve conter `confiasystem://reset-password` em Redirect URLs;
+      - template de e-mail deve deixar claro que o link expira e deve ser usado apenas pelo titular.
+    - teste de seguranca:
+      - app nao deve informar se o e-mail existe ou nao de forma que facilite enumeracao;
+      - erros tecnicos devem gerar `reportAppError`;
+      - senha nova nao deve aparecer em logs, diagnosticos ou issues.

@@ -3,6 +3,8 @@ import type { Session } from '@supabase/supabase-js';
 import { supabase } from './supabase';
 import type { AppProfile, AuthenticatedUser, UnitDirectoryItem, UserContext } from '../types/domain';
 
+const PASSWORD_RECOVERY_REDIRECT_URL = 'confiasystem://reset-password';
+
 export type LoadedAuthState =
   | {
       status: 'authenticated';
@@ -36,6 +38,76 @@ export async function signInWithEmail(email: string, password: string): Promise<
   return loadAuthenticatedState(data.session);
 }
 
+export async function requestPasswordReset(email: string) {
+  if (!supabase) {
+    throw new Error('Supabase nao configurado. Preencha EXPO_PUBLIC_SUPABASE_URL e EXPO_PUBLIC_SUPABASE_ANON_KEY.');
+  }
+
+  const normalizedEmail = email.trim().toLowerCase();
+
+  if (!normalizedEmail) {
+    throw new Error('Informe o e-mail cadastrado.');
+  }
+
+  const { error } = await supabase.auth.resetPasswordForEmail(normalizedEmail, {
+    redirectTo: PASSWORD_RECOVERY_REDIRECT_URL,
+  });
+
+  if (error) {
+    throw new Error(error.message);
+  }
+}
+
+export async function startPasswordRecoveryFromUrl(url: string) {
+  if (!supabase || !isPasswordRecoveryUrl(url)) {
+    return false;
+  }
+
+  const params = parseRecoveryUrlParams(url);
+  const code = params.get('code');
+  const accessToken = params.get('access_token');
+  const refreshToken = params.get('refresh_token');
+
+  if (code) {
+    const { error } = await supabase.auth.exchangeCodeForSession(code);
+
+    if (error) {
+      throw new Error(error.message);
+    }
+
+    return true;
+  }
+
+  if (accessToken && refreshToken) {
+    const { error } = await supabase.auth.setSession({
+      access_token: accessToken,
+      refresh_token: refreshToken,
+    });
+
+    if (error) {
+      throw new Error(error.message);
+    }
+
+    return true;
+  }
+
+  return true;
+}
+
+export async function completePasswordReset(password: string) {
+  if (!supabase) {
+    throw new Error('Supabase nao configurado. Preencha EXPO_PUBLIC_SUPABASE_URL e EXPO_PUBLIC_SUPABASE_ANON_KEY.');
+  }
+
+  const { error } = await supabase.auth.updateUser({ password });
+
+  if (error) {
+    throw new Error(error.message);
+  }
+
+  await supabase.auth.signOut();
+}
+
 export async function loadCurrentAuthState(): Promise<LoadedAuthState> {
   if (!supabase) {
     return { status: 'unauthenticated' };
@@ -48,6 +120,27 @@ export async function loadCurrentAuthState(): Promise<LoadedAuthState> {
   }
 
   return loadAuthenticatedState(data.session);
+}
+
+function isPasswordRecoveryUrl(url: string) {
+  return /^confiasystem:\/\/reset-password/i.test(url) || /[?&#]type=recovery/i.test(url);
+}
+
+function parseRecoveryUrlParams(url: string) {
+  const params = new URLSearchParams();
+  const [, query = ''] = url.split('?');
+  const [queryPart = '', hashPart = ''] = query.split('#');
+  const hashOnly = url.includes('#') ? url.slice(url.indexOf('#') + 1) : hashPart;
+
+  for (const source of [queryPart, hashOnly]) {
+    const sourceParams = new URLSearchParams(source);
+
+    sourceParams.forEach((value, key) => {
+      params.set(key, value);
+    });
+  }
+
+  return params;
 }
 
 export async function signOut() {

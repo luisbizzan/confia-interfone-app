@@ -1059,6 +1059,22 @@ Implementado em 25/05/2026 para a etapa Android de chamada nativa:
   - composer permanece fixo no rodape da area de conversa e sobe com o teclado pelo comportamento de resize do Android;
   - abertura da conversa continua rolando para o fim e focando o input automaticamente;
   - objetivo: comportamento mais proximo de chat profissional, com input sempre acessivel e anexos/imagens sem empurrar a digitacao para fora da tela.
+- Recuperacao de senha em 07/06/2026:
+  - tela de login ganhou acao `Esqueci minha senha`;
+  - usuario informa o e-mail cadastrado e o app dispara o fluxo nativo do Supabase Auth por `resetPasswordForEmail`;
+  - app passou a registrar o deep link `confiasystem://reset-password` para receber o retorno do e-mail de recuperacao;
+  - quando o usuario abre o link recebido, o app entra no modo de criacao de nova senha;
+  - nova senha exige:
+    - 8 ou mais caracteres;
+    - letra maiuscula;
+    - letra minuscula;
+    - numero;
+    - caractere especial;
+  - depois de alterar a senha, o app encerra a sessao de recuperacao e orienta o usuario a entrar novamente;
+  - erros tecnicos no envio ou conclusao da recuperacao usam `reportAppError`;
+  - configuracao obrigatoria no Supabase Auth para cada ambiente:
+    - adicionar `confiasystem://reset-password` em Redirect URLs permitidas;
+    - revisar template de e-mail de recuperacao para manter linguagem Confia System.
 
 Observacao importante:
 

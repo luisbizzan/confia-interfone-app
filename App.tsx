@@ -2,7 +2,7 @@ import { StatusBar } from 'expo-status-bar';
 import { MaterialIcons } from '@expo/vector-icons';
 import Constants from 'expo-constants';
 import { useEffect, useMemo, useState } from 'react';
-import { ActivityIndicator, AppState, Platform, SafeAreaView, ScrollView, StatusBar as NativeStatusBar, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import { ActivityIndicator, AppState, Linking, Platform, SafeAreaView, ScrollView, StatusBar as NativeStatusBar, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 
 import { AppErrorBoundary } from './src/components/AppErrorBoundary';
 import { ActiveCallExperience, IncomingCallExperience, OutgoingCallExperience } from './src/components/CallExperience';
@@ -19,7 +19,15 @@ import {
   isOutgoingGatehouseCall,
   isOutgoingResidentCall,
 } from './src/services/call-ownership';
-import { loadCurrentAuthState, signInWithEmail, signOut, type LoadedAuthState } from './src/services/auth';
+import {
+  completePasswordReset,
+  loadCurrentAuthState,
+  requestPasswordReset,
+  signInWithEmail,
+  signOut,
+  startPasswordRecoveryFromUrl,
+  type LoadedAuthState,
+} from './src/services/auth';
 import { clearErrorReportingContext, registerGlobalErrorHandlers, reportAppError, setErrorReportingContext } from './src/services/error-reporting';
 import { clearNativeCallAuth, consumeNativeIncomingCallAction, dismissNativeIncomingCall, syncNativeCallAuth, type NativeIncomingCallAction } from './src/services/native-calls';
 import { addNotificationResponseListener, configureIncomingCallNotifications, registerForPushNotifications, unregisterPushToken } from './src/services/push-notifications';
@@ -54,6 +62,7 @@ function AppContent() {
   const [versionPolicy, setVersionPolicy] = useState<AppVersionPolicy | null>(null);
   const [pushToken, setPushToken] = useState<string | null>(null);
   const [pushRegistrationStatus, setPushRegistrationStatus] = useState<'idle' | 'registering' | 'registered' | 'unavailable' | 'error'>('idle');
+  const [isPasswordRecoveryMode, setIsPasswordRecoveryMode] = useState(false);
 
   useEffect(() => {
     registerGlobalErrorHandlers();
@@ -220,10 +229,24 @@ function AppContent() {
   useEffect(() => {
     let mounted = true;
 
-    Promise.allSettled([checkAppVersionPolicy(), loadCurrentAuthState()])
-      .then(([versionResult, authResult]) => {
+    async function bootstrap() {
+      const versionResult = await checkAppVersionPolicy()
+        .then((value) => ({ status: 'fulfilled' as const, value }))
+        .catch((reason) => ({ status: 'rejected' as const, reason }));
+      const initialUrl = await Linking.getInitialURL();
+      const startedPasswordRecovery = initialUrl ? await startPasswordRecoveryFromUrl(initialUrl) : false;
+      const authResult = startedPasswordRecovery
+        ? ({ status: 'fulfilled' as const, value: { status: 'unauthenticated' as const } })
+        : await loadCurrentAuthState()
+            .then((value) => ({ status: 'fulfilled' as const, value }))
+            .catch((reason) => ({ status: 'rejected' as const, reason }));
+
         if (!mounted) {
           return;
+        }
+
+        if (startedPasswordRecovery) {
+          setIsPasswordRecoveryMode(true);
         }
 
         if (versionResult.status === 'fulfilled') {
@@ -239,15 +262,37 @@ function AppContent() {
           void reportAppError(authResult.reason, { source: 'auth-bootstrap' });
           setAuthState({ status: 'unauthenticated' });
         }
-      })
-      .finally(() => {
+
         if (mounted) {
           setIsBooting(false);
         }
-      });
+    }
+
+    void bootstrap().catch((error) => {
+      if (mounted) {
+        setAuthState({ status: 'unauthenticated' });
+        setIsBooting(false);
+      }
+      void reportAppError(error, { source: 'app-bootstrap' });
+    });
+
+    const subscription = Linking.addEventListener('url', ({ url }) => {
+      void startPasswordRecoveryFromUrl(url)
+        .then((started) => {
+          if (mounted && started) {
+            setIsPasswordRecoveryMode(true);
+            setAuthState({ status: 'unauthenticated' });
+            setActiveView('home');
+          }
+        })
+        .catch((error) => {
+          void reportAppError(error, { source: 'password-recovery-link' });
+        });
+    });
 
     return () => {
       mounted = false;
+      subscription.remove();
     };
   }, []);
 
@@ -343,7 +388,13 @@ function AppContent() {
     return (
       <SafeAreaView style={styles.safeArea}>
         <StatusBar style="dark" />
-        <LoginScreen onLogin={handleLogin} />
+        <LoginScreen
+          isPasswordRecoveryMode={isPasswordRecoveryMode}
+          onCompletePasswordReset={completePasswordReset}
+          onLogin={handleLogin}
+          onPasswordRecoveryHandled={() => setIsPasswordRecoveryMode(false)}
+          onRequestPasswordReset={requestPasswordReset}
+        />
       </SafeAreaView>
     );
   }
