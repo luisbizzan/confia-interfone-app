@@ -156,7 +156,7 @@ function CallStage({
 
 const styles = StyleSheet.create({
   screen: {
-    backgroundColor: '#063b3c',
+    backgroundColor: theme.colors.primaryDark,
     borderRadius: theme.radius.lg,
     flex: 1,
     justifyContent: 'space-between',
@@ -170,15 +170,15 @@ const styles = StyleSheet.create({
     paddingTop: theme.spacing.xxl,
   },
   eyebrow: {
-    color: '#baf5ec',
+    color: '#d8eaff',
     fontSize: 13,
     fontWeight: '900',
     textTransform: 'uppercase',
   },
   avatar: {
     alignItems: 'center',
-    backgroundColor: '#12857b',
-    borderColor: '#4ecdc0',
+    backgroundColor: theme.colors.primary,
+    borderColor: theme.colors.info,
     borderRadius: 999,
     borderWidth: 1,
     height: 128,
@@ -194,7 +194,7 @@ const styles = StyleSheet.create({
     textAlign: 'center',
   },
   meta: {
-    color: '#d9f4f1',
+    color: '#e6f0ff',
     fontSize: 15,
     lineHeight: 22,
     maxWidth: 360,

@@ -1,0 +1,10 @@
+<svg width="1024" height="1024" viewBox="0 0 1024 1024" fill="none" xmlns="http://www.w3.org/2000/svg" role="img" aria-labelledby="title desc">
+  <title id="title">Confia System app mark</title>
+  <desc id="desc">Square app mark for Confia System with blue shield, white check path, and red signal dot.</desc>
+  <rect width="1024" height="1024" rx="220" fill="#FFFFFF"/>
+  <path d="M512 120L826 240V480C826 679 700.8 828.9 512 884C323.2 828.9 198 679 198 480V240L512 120Z" fill="#0B4EA2"/>
+  <path d="M512 180L768 278V480C768 643.2 666 766.8 512 817.5C358 766.8 256 643.2 256 480V278L512 180Z" fill="#1267C9"/>
+  <path d="M370 511L467 608L666 409" stroke="#FFFFFF" stroke-width="68" stroke-linecap="round" stroke-linejoin="round"/>
+  <path d="M666 409C722 353 812 353 868 409" stroke="#E1272D" stroke-width="56" stroke-linecap="round"/>
+  <circle cx="914" cy="455" r="42" fill="#E1272D"/>
+</svg>

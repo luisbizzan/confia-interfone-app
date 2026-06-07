@@ -63,6 +63,16 @@ export async function cancelCall(callId: string, reason = 'cancelled_by_app'): P
   return callRpc('cancel_call', { p_call_id: callId, p_reason: reason });
 }
 
+export async function declineCall(callId: string, user?: AuthenticatedUser): Promise<StartCallResult> {
+  const call = await callRpc('decline_call', { p_call_id: callId });
+
+  if (call.status === 'RINGING') {
+    void dispatchPushNotification(call.id, user, { action: 'push_dispatch_after_decline' });
+  }
+
+  return call;
+}
+
 export async function endCall(callId: string, reason = 'ended_by_app'): Promise<StartCallResult> {
   return callRpc('end_call', { p_call_id: callId, p_reason: reason });
 }

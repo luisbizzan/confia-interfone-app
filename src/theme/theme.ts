@@ -1,15 +1,15 @@
 export const theme = {
   colors: {
-    background: '#f5f7fb',
-    border: '#d8e1ee',
-    danger: '#dc2626',
-    info: '#2563eb',
-    muted: '#506176',
-    primary: '#12857b',
-    primaryDark: '#0b5f58',
+    background: '#f4f7fb',
+    border: '#d6e1ef',
+    danger: '#E1272D',
+    info: '#1267C9',
+    muted: '#52627a',
+    primary: '#0B4EA2',
+    primaryDark: '#07386f',
     success: '#16a34a',
     surface: '#ffffff',
-    text: '#071732',
+    text: '#0B1F3A',
     warning: '#d97706',
   },
   radius: {

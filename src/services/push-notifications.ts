@@ -51,7 +51,7 @@ export async function configureIncomingCallNotifications() {
       usage: Notifications.AndroidAudioUsage.NOTIFICATION_RINGTONE,
     },
     importance: Notifications.AndroidImportance.MAX,
-    lightColor: '#0f8f7f',
+    lightColor: '#0B4EA2',
     lockscreenVisibility: Notifications.AndroidNotificationVisibility.PUBLIC,
     name: 'Chamadas recebidas',
     sound: INCOMING_CALL_SOUND,
@@ -125,7 +125,7 @@ export async function registerForPushNotifications(user: AuthenticatedUser) {
       p_device_id: Constants.sessionId ?? null,
       p_device_name: Device.deviceName ?? `${Platform.OS} device`,
       p_expo_push_token: token.data,
-      p_native_push_provider: nativeToken?.type ?? null,
+      p_native_push_provider: normalizeNativePushProvider(nativeToken?.type),
       p_native_push_token: typeof nativeToken?.data === 'string' ? nativeToken.data : null,
       p_platform: Platform.OS,
       p_profile: user.profile,
@@ -181,6 +181,12 @@ export type IncomingCallNotificationAction = 'answer' | 'decline' | 'open';
 export type IncomingCallNotificationResponse = {
   action: IncomingCallNotificationAction;
   callId: string | null;
+  kind: 'incoming_call';
+} | {
+  action: 'open';
+  kind: 'message';
+  messageId: string | null;
+  threadId: string | null;
 };
 
 export function addNotificationResponseListener(onIncomingCall: (response: IncomingCallNotificationResponse) => void) {
@@ -192,6 +198,17 @@ export function addNotificationResponseListener(onIncomingCall: (response: Incom
       onIncomingCall({
         action: mapNotificationAction(response.actionIdentifier),
         callId: getNotificationCallId(data),
+        kind: 'incoming_call',
+      });
+      return;
+    }
+
+    if (kind === 'message') {
+      onIncomingCall({
+        action: 'open',
+        kind: 'message',
+        messageId: getNotificationString(data, 'message_id') ?? getNotificationString(data, 'messageId'),
+        threadId: getNotificationString(data, 'thread_id') ?? getNotificationString(data, 'threadId'),
       });
     }
   });
@@ -224,8 +241,12 @@ function mapNotificationAction(actionIdentifier: string): IncomingCallNotificati
 }
 
 function getNotificationCallId(data: Record<string, unknown> | undefined) {
-  const callId = data?.call_id ?? data?.callId;
-  return typeof callId === 'string' && callId.trim() ? callId.trim() : null;
+  return getNotificationString(data, 'call_id') ?? getNotificationString(data, 'callId');
+}
+
+function getNotificationString(data: Record<string, unknown> | undefined, key: string) {
+  const value = data?.[key];
+  return typeof value === 'string' && value.trim() ? value.trim() : null;
 }
 
 async function ensureNotificationPermission() {
@@ -246,6 +267,14 @@ function getExpoProjectId() {
   };
 
   return constants.easConfig?.projectId ?? constants.expoConfig?.extra?.eas?.projectId;
+}
+
+function normalizeNativePushProvider(provider: string | undefined) {
+  if (provider === 'android') {
+    return 'fcm';
+  }
+
+  return provider ?? null;
 }
 
 function getPushErrorMessage(error: unknown) {

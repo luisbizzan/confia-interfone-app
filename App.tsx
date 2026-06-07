@@ -2,16 +2,17 @@ import { StatusBar } from 'expo-status-bar';
 import { MaterialIcons } from '@expo/vector-icons';
 import Constants from 'expo-constants';
 import { useEffect, useMemo, useState } from 'react';
-import { ActivityIndicator, Platform, SafeAreaView, ScrollView, StatusBar as NativeStatusBar, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import { ActivityIndicator, AppState, Platform, SafeAreaView, ScrollView, StatusBar as NativeStatusBar, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 
 import { AppErrorBoundary } from './src/components/AppErrorBoundary';
 import { ActiveCallExperience, IncomingCallExperience, OutgoingCallExperience } from './src/components/CallExperience';
 import { AppHomeScreen } from './src/screens/AppHomeScreen';
 import { LoginScreen } from './src/screens/LoginScreen';
+import { MessageCenterScreen } from './src/screens/MessageCenterScreen';
 import { ResidentHomeScreen } from './src/screens/ResidentHomeScreen';
 import { GatehouseHomeScreen } from './src/screens/GatehouseHomeScreen';
 import { env } from './src/config/env';
-import { answerGatehouseCall, answerResidentCall, cancelCall, endCall, getMyCallHistory, getMyPendingCalls } from './src/services/calls';
+import { answerGatehouseCall, answerResidentCall, cancelCall, declineCall, endCall, getMyCallHistory, getMyPendingCalls } from './src/services/calls';
 import {
   isCallRelevantToGatehouse,
   isCallRelevantToResident,
@@ -20,7 +21,10 @@ import {
 } from './src/services/call-ownership';
 import { loadCurrentAuthState, signInWithEmail, signOut, type LoadedAuthState } from './src/services/auth';
 import { clearErrorReportingContext, registerGlobalErrorHandlers, reportAppError, setErrorReportingContext } from './src/services/error-reporting';
+import { clearNativeCallAuth, consumeNativeIncomingCallAction, dismissNativeIncomingCall, syncNativeCallAuth, type NativeIncomingCallAction } from './src/services/native-calls';
 import { addNotificationResponseListener, configureIncomingCallNotifications, registerForPushNotifications, unregisterPushToken } from './src/services/push-notifications';
+import { checkAppVersionPolicy, openAppUpdateUrl, type AppVersionPolicy } from './src/services/app-version';
+import type { MessageTarget } from './src/services/messages';
 import { theme } from './src/theme/theme';
 import type { AuthenticatedUser, BackendCallRecord, CallRecord, PendingPortariaCall, PendingUnitCall, UnitDirectoryItem, UserContext } from './src/types/domain';
 
@@ -43,9 +47,11 @@ export default function App() {
 function AppContent() {
   const [authState, setAuthState] = useState<LoadedAuthState>({ status: 'unauthenticated' });
   const [isBooting, setIsBooting] = useState(true);
-  const [activeView, setActiveView] = useState<'home' | 'intercom' | 'settings'>('home');
+  const [activeView, setActiveView] = useState<'home' | 'intercom' | 'messages' | 'settings'>('home');
+  const [messageTarget, setMessageTarget] = useState<MessageTarget | null>(null);
   const [shouldSimulateError, setShouldSimulateError] = useState(false);
   const [globalCallState, setGlobalCallState] = useState<GlobalCallState>({ status: 'idle' });
+  const [versionPolicy, setVersionPolicy] = useState<AppVersionPolicy | null>(null);
   const [pushToken, setPushToken] = useState<string | null>(null);
   const [pushRegistrationStatus, setPushRegistrationStatus] = useState<'idle' | 'registering' | 'registered' | 'unavailable' | 'error'>('idle');
 
@@ -67,6 +73,44 @@ function AppContent() {
 
     clearErrorReportingContext();
   }, [activeView, authState]);
+
+  useEffect(() => {
+    if (authState.status !== 'authenticated') {
+      void clearNativeCallAuth().catch((error) => {
+        void reportAppError(error, { source: 'native-call-auth-clear' });
+      });
+      return undefined;
+    }
+
+    let mounted = true;
+
+    const syncAuth = async () => {
+      try {
+        if (!mounted || !env.supabaseUrl || !env.supabaseAnonKey) {
+          return;
+        }
+
+        await syncNativeCallAuth({
+          accessToken: authState.session.access_token,
+          anonKey: env.supabaseAnonKey,
+          refreshToken: authState.session.refresh_token,
+          supabaseUrl: env.supabaseUrl,
+        });
+      } catch (error) {
+        void reportAppError(error, { source: 'native-call-auth-sync' });
+      }
+    };
+
+    void syncAuth();
+    const intervalId = setInterval(() => {
+      void syncAuth();
+    }, 10 * 60 * 1000);
+
+    return () => {
+      mounted = false;
+      clearInterval(intervalId);
+    };
+  }, [authState]);
 
   useEffect(() => {
     if (authState.status !== 'authenticated') {
@@ -93,10 +137,26 @@ function AppContent() {
       });
 
     const subscription = addNotificationResponseListener((notification) => {
+      if (notification.kind === 'message') {
+        setMessageTarget(null);
+        setActiveView('messages');
+        return;
+      }
+
       setActiveView('intercom');
 
       if (notification.action === 'answer' && notification.callId) {
         void handleNotificationAnswer(
+          authState.user,
+          authState.context,
+          buildUnitLabelMap(authState.context, authState.units),
+          setGlobalCallState,
+          notification.callId,
+        );
+      }
+
+      if (notification.action === 'decline' && notification.callId) {
+        void handleNotificationDecline(
           authState.user,
           authState.context,
           buildUnitLabelMap(authState.context, authState.units),
@@ -113,17 +173,70 @@ function AppContent() {
   }, [authState]);
 
   useEffect(() => {
+    if (authState.status !== 'authenticated') {
+      return undefined;
+    }
+
     let mounted = true;
 
-    loadCurrentAuthState()
-      .then((state) => {
-        if (mounted) {
-          setAuthState(state);
+    const consumeAction = async () => {
+      try {
+        const action = await consumeNativeIncomingCallAction();
+
+        if (mounted && action) {
+          await handleNativeIncomingCallAction(
+            authState.user,
+            authState.context,
+            buildUnitLabelMap(authState.context, authState.units),
+            setActiveView,
+            setGlobalCallState,
+            action,
+          );
         }
-      })
-      .catch((error) => {
-        void reportAppError(error, { source: 'auth-bootstrap' });
-        if (mounted) {
+      } catch (error) {
+        void reportAppError(error, { source: 'native-call-action' });
+      }
+    };
+
+    void consumeAction();
+
+    const intervalId = setInterval(() => {
+      void consumeAction();
+    }, 1000);
+
+    const subscription = AppState.addEventListener('change', (state) => {
+      if (state === 'active') {
+        void consumeAction();
+      }
+    });
+
+    return () => {
+      mounted = false;
+      clearInterval(intervalId);
+      subscription.remove();
+    };
+  }, [authState]);
+
+  useEffect(() => {
+    let mounted = true;
+
+    Promise.allSettled([checkAppVersionPolicy(), loadCurrentAuthState()])
+      .then(([versionResult, authResult]) => {
+        if (!mounted) {
+          return;
+        }
+
+        if (versionResult.status === 'fulfilled') {
+          setVersionPolicy(versionResult.value);
+        } else {
+          setVersionPolicy({ status: 'unavailable', reason: 'Nao foi possivel validar a versao instalada.' });
+          void reportAppError(versionResult.reason, { source: 'version-policy-bootstrap' });
+        }
+
+        if (authResult.status === 'fulfilled') {
+          setAuthState(authResult.value);
+        } else {
+          void reportAppError(authResult.reason, { source: 'auth-bootstrap' });
           setAuthState({ status: 'unauthenticated' });
         }
       })
@@ -138,6 +251,12 @@ function AppContent() {
     };
   }, []);
 
+  useEffect(() => {
+    if (versionPolicy?.status === 'unavailable') {
+      void reportAppError(new Error(versionPolicy.reason), { source: 'version-policy-unavailable' });
+    }
+  }, [versionPolicy]);
+
   async function handleLogin(email: string, password: string) {
     const state = await signInWithEmail(email, password);
     setAuthState(state);
@@ -146,6 +265,7 @@ function AppContent() {
 
   async function handleLogout() {
     await unregisterPushToken(pushToken);
+    await clearNativeCallAuth();
     await signOut();
     setAuthState({ status: 'unauthenticated' });
     setActiveView('home');
@@ -156,6 +276,8 @@ function AppContent() {
 
   const authenticatedState = authState.status === 'authenticated' ? authState : null;
   const intercomEnabled = authenticatedState ? authenticatedState.context.features?.INTERCOM !== false : false;
+  const messagingEnabled = authenticatedState ? authenticatedState.context.features?.MESSAGING !== false : false;
+  const isMessagesView = Boolean(authenticatedState && globalCallState.status === 'idle' && activeView === 'messages' && messagingEnabled);
   const unitLabels = useMemo(
     () => (authenticatedState ? buildUnitLabelMap(authenticatedState.context, authenticatedState.units) : new Map<string, string>()),
     [authenticatedState],
@@ -208,6 +330,15 @@ function AppContent() {
     );
   }
 
+  if (versionPolicy?.status === 'update_required') {
+    return (
+      <SafeAreaView style={styles.safeArea}>
+        <StatusBar style="dark" />
+        <UpdateRequiredView policy={versionPolicy} />
+      </SafeAreaView>
+    );
+  }
+
   if (!authenticatedState) {
     return (
       <SafeAreaView style={styles.safeArea}>
@@ -232,6 +363,11 @@ function AppContent() {
         </TouchableOpacity>
       </View>
 
+      {isMessagesView ? (
+        <View style={[styles.content, styles.messageContent]}>
+          <MessageCenterScreen initialTarget={messageTarget} onClearTarget={() => setMessageTarget(null)} user={user} />
+        </View>
+      ) : (
       <ScrollView contentContainerStyle={styles.content}>
         {globalCallState.status === 'incoming' ? (
           <IncomingCallExperience
@@ -273,13 +409,32 @@ function AppContent() {
             pushRegistrationStatus={pushRegistrationStatus}
             pushToken={pushToken}
             user={user}
+            versionPolicy={versionPolicy}
           />
         ) : null}
         {globalCallState.status === 'idle' && activeView === 'intercom' && intercomEnabled && user.profile === 'resident' ? (
-          <ResidentHomeScreen context={context} directoryUnits={units} user={user} />
+          <ResidentHomeScreen
+            context={context}
+            directoryUnits={units}
+            messagingEnabled={messagingEnabled}
+            user={user}
+            onOpenMessages={(target) => {
+              setMessageTarget(target);
+              setActiveView('messages');
+            }}
+          />
         ) : null}
         {globalCallState.status === 'idle' && activeView === 'intercom' && intercomEnabled && user.profile === 'gatehouse' ? (
-          <GatehouseHomeScreen context={context} directoryUnits={units} user={user} />
+          <GatehouseHomeScreen
+            context={context}
+            directoryUnits={units}
+            messagingEnabled={messagingEnabled}
+            user={user}
+            onOpenMessages={(target) => {
+              setMessageTarget(target);
+              setActiveView('messages');
+            }}
+          />
         ) : null}
         {globalCallState.status === 'idle' && activeView === 'intercom' && !intercomEnabled ? (
           <View style={styles.unavailable}>
@@ -288,6 +443,7 @@ function AppContent() {
           </View>
         ) : null}
       </ScrollView>
+      )}
 
       <View style={styles.bottomNavigation}>
         <NavigationButton active={activeView === 'home'} icon="home" label="Inicio" onPress={() => setActiveView('home')} />
@@ -297,6 +453,17 @@ function AppContent() {
             icon="call"
             label="Interfone"
             onPress={() => setActiveView('intercom')}
+          />
+        ) : null}
+        {messagingEnabled ? (
+          <NavigationButton
+            active={activeView === 'messages'}
+            icon="chat"
+            label="Mensagens"
+            onPress={() => {
+              setMessageTarget(null);
+              setActiveView('messages');
+            }}
           />
         ) : null}
         <NavigationButton
@@ -320,6 +487,8 @@ async function handleNotificationAnswer(
   callId: string,
 ) {
   try {
+    await dismissNativeIncomingCall(callId);
+
     if (user.profile === 'gatehouse') {
       await answerGatehouseCall(callId);
     } else {
@@ -328,11 +497,78 @@ async function handleNotificationAnswer(
 
     await refreshGlobalCallState(user, context, unitLabels, setGlobalCallState);
   } catch (error) {
+    void reportAppError(error, {
+      metadata: { callId, action: 'notification_answer_call' },
+      source: 'call-action-error',
+    });
+
     setGlobalCallState({
       status: 'idle',
-      feedback: `Nao foi possivel atender pela notificacao: ${error instanceof Error ? error.message : 'Abra o interfone e tente novamente.'}`,
+      feedback: 'Nao foi possivel atender a chamada agora. O time tecnico foi notificado.',
     });
   }
+}
+
+async function handleNativeIncomingCallAction(
+  user: AuthenticatedUser,
+  context: UserContext,
+  unitLabels: Map<string, string>,
+  setActiveView: (view: 'home' | 'intercom' | 'messages' | 'settings') => void,
+  setGlobalCallState: (state: GlobalCallState) => void,
+  action: NativeIncomingCallAction,
+) {
+  if (action.kind === 'message') {
+    setActiveView('messages');
+    return;
+  }
+
+  setActiveView('intercom');
+
+  if (action.action === 'answer') {
+    await handleNotificationAnswer(user, context, unitLabels, setGlobalCallState, action.call_id);
+    return;
+  }
+
+  if (action.action === 'decline') {
+    await handleNotificationDecline(user, context, unitLabels, setGlobalCallState, action.call_id);
+    return;
+  }
+
+  await refreshGlobalCallState(user, context, unitLabels, setGlobalCallState);
+}
+
+async function handleNotificationDecline(
+  user: AuthenticatedUser,
+  context: UserContext,
+  unitLabels: Map<string, string>,
+  setGlobalCallState: (state: GlobalCallState) => void,
+  callId: string,
+) {
+  try {
+    await dismissNativeIncomingCall(callId);
+    await declineCall(callId, user);
+    await refreshGlobalCallState(user, context, unitLabels, setGlobalCallState);
+  } catch (error) {
+    if (isCallAlreadyResolvedError(error)) {
+      await dismissNativeIncomingCall(callId);
+      await refreshGlobalCallState(user, context, unitLabels, setGlobalCallState);
+      return;
+    }
+
+    void reportAppError(error, {
+      metadata: { callId, action: 'notification_decline_call' },
+      source: 'call-action-error',
+    });
+
+    setGlobalCallState({
+      status: 'idle',
+      feedback: 'Nao foi possivel recusar a chamada agora. O time tecnico foi notificado.',
+    });
+  }
+}
+
+function isCallAlreadyResolvedError(error: unknown) {
+  return error instanceof Error && /call not found or not ringing/i.test(error.message);
 }
 
 function NavigationButton({
@@ -342,7 +578,7 @@ function NavigationButton({
   onPress,
 }: {
   active: boolean;
-  icon: 'call' | 'home' | 'settings';
+  icon: 'call' | 'chat' | 'home' | 'settings';
   label: string;
   onPress: () => void;
 }) {
@@ -360,12 +596,14 @@ function SettingsView({
   pushRegistrationStatus,
   pushToken,
   user,
+  versionPolicy,
 }: {
   context: UserContext;
   onSimulateError: () => void;
   pushRegistrationStatus: 'idle' | 'registering' | 'registered' | 'unavailable' | 'error';
   pushToken: string | null;
   user: AuthenticatedUser;
+  versionPolicy: AppVersionPolicy | null;
 }) {
   const version = Constants.nativeAppVersion ?? Constants.expoConfig?.version ?? '1.0.0';
   const build = Constants.nativeBuildVersion ?? 'preview';
@@ -386,7 +624,7 @@ function SettingsView({
         <Text style={styles.settingLabel}>Notificacoes</Text>
         <Text style={styles.settingValue}>{formatPushRegistrationStatus(pushRegistrationStatus, pushToken)}</Text>
         <Text style={styles.settingLabel}>Atualizacoes</Text>
-        <Text style={styles.settingValue}>Pela loja oficial quando publicado; no piloto, pelo APK mais recente validado.</Text>
+        <Text style={styles.settingValue}>{formatVersionPolicyStatus(versionPolicy)}</Text>
       </View>
       {env.enableErrorTest ? (
         <View style={styles.dangerPanel}>
@@ -399,6 +637,43 @@ function SettingsView({
       ) : null}
     </View>
   );
+}
+
+function UpdateRequiredView({ policy }: { policy: Extract<AppVersionPolicy, { status: 'update_required' }> }) {
+  return (
+    <View style={styles.updateRequiredScreen}>
+      <View style={styles.updateRequiredPanel}>
+        <Text style={styles.updateBrand}>Confia</Text>
+        <Text style={styles.updateTitle}>Atualizacao necessaria</Text>
+        <Text style={styles.updateText}>{policy.message}</Text>
+        <Text style={styles.updateDetails}>
+          Versao instalada: {policy.currentVersion} ({policy.currentBuild || 'preview'})
+        </Text>
+        <Text style={styles.updateDetails}>
+          Versao minima: {policy.minimumVersion} ({policy.minimumBuild})
+        </Text>
+        <TouchableOpacity accessibilityRole="button" style={styles.updateButton} onPress={() => void openAppUpdateUrl(policy.updateUrl)}>
+          <Text style={styles.updateButtonText}>{policy.updateUrl ? 'Atualizar aplicativo' : 'Fale com o suporte'}</Text>
+        </TouchableOpacity>
+      </View>
+    </View>
+  );
+}
+
+function formatVersionPolicyStatus(policy: AppVersionPolicy | null) {
+  if (!policy) {
+    return 'Validando versao instalada...';
+  }
+
+  if (policy.status === 'ok') {
+    return `Versao permitida. Ultima versao: ${policy.latestVersion ?? 'nao informada'} (${policy.latestBuild ?? 'sem build'}).`;
+  }
+
+  if (policy.status === 'update_required') {
+    return `Atualizacao obrigatoria para ${policy.minimumVersion} (${policy.minimumBuild}).`;
+  }
+
+  return 'Nao foi possivel validar a politica de atualizacao; uso liberado para evitar bloqueio indevido.';
 }
 
 function formatPushRegistrationStatus(status: 'idle' | 'registering' | 'registered' | 'unavailable' | 'error', token: string | null) {
@@ -639,6 +914,10 @@ const styles = StyleSheet.create({
     padding: theme.spacing.lg,
     paddingBottom: Platform.OS === 'android' ? 104 : theme.spacing.xxl,
   },
+  messageContent: {
+    flex: 1,
+    paddingBottom: theme.spacing.md,
+  },
   loading: {
     alignItems: 'center',
     flex: 1,
@@ -677,15 +956,15 @@ const styles = StyleSheet.create({
     color: theme.colors.primary,
   },
   monitorFeedback: {
-    backgroundColor: '#fff7ed',
-    borderColor: '#fed7aa',
+    backgroundColor: '#eef5ff',
+    borderColor: '#cfe1f8',
     borderRadius: theme.radius.md,
     borderWidth: 1,
     marginBottom: theme.spacing.md,
     padding: theme.spacing.md,
   },
   monitorFeedbackText: {
-    color: '#9a3412',
+    color: theme.colors.primaryDark,
     fontSize: 14,
     fontWeight: '800',
   },
@@ -767,6 +1046,52 @@ const styles = StyleSheet.create({
     paddingVertical: theme.spacing.md,
   },
   simulateButtonText: {
+    color: '#ffffff',
+    fontSize: 15,
+    fontWeight: '900',
+  },
+  updateRequiredScreen: {
+    flex: 1,
+    justifyContent: 'center',
+    padding: theme.spacing.lg,
+  },
+  updateRequiredPanel: {
+    backgroundColor: theme.colors.surface,
+    borderColor: theme.colors.border,
+    borderRadius: theme.radius.lg,
+    borderWidth: 1,
+    gap: theme.spacing.md,
+    padding: theme.spacing.xl,
+  },
+  updateBrand: {
+    color: theme.colors.primary,
+    fontSize: 34,
+    fontWeight: '900',
+  },
+  updateTitle: {
+    color: theme.colors.text,
+    fontSize: 24,
+    fontWeight: '900',
+  },
+  updateText: {
+    color: theme.colors.muted,
+    fontSize: 16,
+    lineHeight: 24,
+  },
+  updateDetails: {
+    color: theme.colors.text,
+    fontSize: 14,
+    fontWeight: '800',
+  },
+  updateButton: {
+    alignItems: 'center',
+    backgroundColor: theme.colors.primary,
+    borderRadius: theme.radius.sm,
+    marginTop: theme.spacing.sm,
+    paddingHorizontal: theme.spacing.lg,
+    paddingVertical: theme.spacing.md,
+  },
+  updateButtonText: {
     color: '#ffffff',
     fontSize: 15,
     fontWeight: '900',

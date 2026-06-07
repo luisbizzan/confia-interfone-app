@@ -1,14 +1,14 @@
 {
   "expo": {
-    "name": "Confia Interfone",
+    "name": "Confia System",
     "slug": "confia-interfone-app",
-    "version": "1.0.10",
+    "version": "1.0.20",
     "orientation": "portrait",
-    "icon": "./assets/icon.png",
+    "icon": "./assets/confia-system-mark-preview.png",
     "userInterfaceStyle": "light",
     "newArchEnabled": false,
     "splash": {
-      "image": "./assets/splash-icon.png",
+      "image": "./assets/confia-system-logo-preview.png",
       "resizeMode": "contain",
       "backgroundColor": "#ffffff"
     },
@@ -20,15 +20,15 @@
       "bitcode": false
     },
     "android": {
-      "versionCode": 17,
+      "versionCode": 27,
       "googleServicesFile": "./google-services.json",
       "softwareKeyboardLayoutMode": "resize",
       "adaptiveIcon": {
-        "foregroundImage": "./assets/adaptive-icon.png",
+        "foregroundImage": "./assets/confia-system-mark-preview.png",
         "backgroundColor": "#ffffff"
       },
       "edgeToEdgeEnabled": false,
-      "package": "br.com.confia.interfone",
+      "package": "br.com.confia.system",
       "permissions": [
         "android.permission.RECORD_AUDIO",
         "android.permission.MODIFY_AUDIO_SETTINGS",

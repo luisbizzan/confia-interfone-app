@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import {
   ActivityIndicator,
+  Image,
   Keyboard,
   KeyboardAvoidingView,
   Platform,
@@ -21,6 +22,8 @@ import { theme } from '../theme/theme';
 type LoginScreenProps = {
   onLogin: (email: string, password: string) => Promise<void>;
 };
+
+const confiaLogo = require('../../assets/confia-system-logo-preview.png');
 
 export function LoginScreen({ onLogin }: LoginScreenProps) {
   const [email, setEmail] = useState('');
@@ -74,8 +77,8 @@ export function LoginScreen({ onLogin }: LoginScreenProps) {
           showsVerticalScrollIndicator={false}
         >
           <Card>
-            <Text style={styles.brand}>Confia</Text>
-            <Text style={styles.title}>Interfone Digital</Text>
+            <Image accessibilityLabel="Confia System" resizeMode="contain" source={confiaLogo} style={styles.logo} />
+            <Text style={styles.title}>Confia System</Text>
             <Text style={styles.description}>Entre com o usuario criado no backoffice para morador ou portaria.</Text>
 
             {!hasSupabaseConfig ? (
@@ -157,10 +160,9 @@ const styles = StyleSheet.create({
     paddingBottom: 280,
     paddingTop: theme.spacing.lg,
   },
-  brand: {
-    color: theme.colors.primary,
-    fontSize: 34,
-    fontWeight: '900',
+  logo: {
+    height: 66,
+    width: 220,
   },
   title: {
     color: theme.colors.text,

@@ -3,6 +3,7 @@ import { Alert, StyleSheet, Text, View } from 'react-native';
 
 import { ActiveCallExperience, IncomingCallExperience, OutgoingCallExperience } from '../components/CallExperience';
 import { Card } from '../components/Card';
+import { MessageActionButton } from '../components/MessageActionButton';
 import { PhoneActionButton } from '../components/PhoneActionButton';
 import { PrimaryButton } from '../components/PrimaryButton';
 import { demoUnits } from '../data/demo-data';
@@ -19,18 +20,22 @@ import {
 import { isCallRelevantToResident, isOutgoingResidentCall } from '../services/call-ownership';
 import { getErrorMessage, logCallDiagnostic } from '../services/diagnostics';
 import { reportAppError } from '../services/error-reporting';
+import { listMyMessageThreads, type MessageTarget, type MessageThread } from '../services/messages';
 import { theme } from '../theme/theme';
 import type { AuthenticatedUser, BackendCallRecord, CallRecord, PendingUnitCall, UnitDirectoryItem, UserContext } from '../types/domain';
 
 type ResidentHomeScreenProps = {
   context: UserContext;
   directoryUnits: UnitDirectoryItem[];
+  messagingEnabled?: boolean;
+  onOpenMessages?: (target: MessageTarget) => void;
   user: AuthenticatedUser;
 };
 
 const CALL_REFRESH_INTERVAL_MS = 5000;
+const MESSAGE_BADGE_REFRESH_INTERVAL_MS = 10000;
 
-export function ResidentHomeScreen({ context, directoryUnits, user }: ResidentHomeScreenProps) {
+export function ResidentHomeScreen({ context, directoryUnits, messagingEnabled = false, onOpenMessages, user }: ResidentHomeScreenProps) {
   const myUnits = context.unit_members.map((member) => formatUnitLabel(member.unit));
   const originUnit = context.unit_members.find((member) => member.active_for_calls && member.can_make_calls);
   const units = directoryUnits.length > 0 ? directoryUnits : myUnits.length > 0 ? buildUnitsFromContext(context) : demoUnits;
@@ -42,6 +47,7 @@ export function ResidentHomeScreen({ context, directoryUnits, user }: ResidentHo
   const [busyUnitIds, setBusyUnitIds] = useState<Set<string>>(new Set());
   const [activeCallTarget, setActiveCallTarget] = useState<string | null>(null);
   const [showHistory, setShowHistory] = useState(false);
+  const [messageThreads, setMessageThreads] = useState<MessageThread[]>([]);
 
   useEffect(() => {
     refreshResidentData(unitLabels, setHistory, setPendingCalls, setFeedback, undefined, user.condominiumId, setBusyUnitIds);
@@ -52,6 +58,19 @@ export function ResidentHomeScreen({ context, directoryUnits, user }: ResidentHo
 
     return () => clearInterval(interval);
   }, [unitLabels, user.condominiumId]);
+
+  useEffect(() => {
+    if (!messagingEnabled) {
+      return undefined;
+    }
+
+    void refreshMessageBadges(setMessageThreads);
+    const interval = setInterval(() => {
+      void refreshMessageBadges(setMessageThreads);
+    }, MESSAGE_BADGE_REFRESH_INTERVAL_MS);
+
+    return () => clearInterval(interval);
+  }, [messagingEnabled]);
 
   const relevantHistory = history.filter((call) => isCallRelevantToResident(call, context));
   const activeCall = relevantHistory.find((call) => call.status === 'ANSWERED' && !call.endedAt);
@@ -103,19 +122,35 @@ export function ResidentHomeScreen({ context, directoryUnits, user }: ResidentHo
             <Text style={styles.sectionTitle}>Portaria</Text>
             <Text style={styles.itemMeta}>Fale com a portaria do seu condominio.</Text>
           </View>
-          <PhoneActionButton
-            accessibilityLabel="Chamar portaria"
-            disabled={activeCallTarget !== null}
-            testID="resident-call-gatehouse"
-            onPress={() => {
-              if (!originUnit?.unit_id) {
-                showInfo('Chamada indisponivel', 'Nenhuma unidade liberada para iniciar chamadas.');
-                return;
-              }
+          <View style={styles.actionButtons}>
+            {messagingEnabled && originUnit?.unit_id ? (
+              <MessageActionButton
+                accessibilityLabel="Enviar mensagem para portaria"
+                testID="resident-message-gatehouse"
+                unreadCount={getResidentGatehouseUnreadCount(messageThreads, originUnit.unit_id)}
+                onPress={() =>
+                  onOpenMessages?.({
+                    label: 'Portaria',
+                    originUnitId: originUnit.unit_id,
+                    targetType: 'PORTARIA',
+                  })
+                }
+              />
+            ) : null}
+            <PhoneActionButton
+              accessibilityLabel="Chamar portaria"
+              disabled={activeCallTarget !== null}
+              testID="resident-call-gatehouse"
+              onPress={() => {
+                if (!originUnit?.unit_id) {
+                  showInfo('Chamada indisponivel', 'Nenhuma unidade liberada para iniciar chamadas.');
+                  return;
+                }
 
-              handleResidentToGatehouseCall(user, originUnit.unit_id, unitLabels, setHistory, setPendingCalls, setFeedback, setActiveCallTarget);
-            }}
-          />
+                handleResidentToGatehouseCall(user, originUnit.unit_id, unitLabels, setHistory, setPendingCalls, setFeedback, setActiveCallTarget);
+              }}
+            />
+          </View>
         </View>
         {feedback ? <Text style={styles.feedback}>{feedback}</Text> : null}
       </Card>
@@ -138,6 +173,9 @@ export function ResidentHomeScreen({ context, directoryUnits, user }: ResidentHo
               setHistory={setHistory}
               setPendingCalls={setPendingCalls}
               busyUnitIds={busyUnitIds}
+              messagingEnabled={messagingEnabled}
+              messageThreads={messageThreads}
+              onOpenMessages={onOpenMessages}
               unit={unit}
               unitLabels={unitLabels}
               user={user}
@@ -187,6 +225,9 @@ function buildUnitLabelMap(units: UnitDirectoryItem[]) {
 function UnitCard({
   activeCallTarget,
   busyUnitIds,
+  messagingEnabled,
+  messageThreads,
+  onOpenMessages,
   originUnitId,
   setActiveCallTarget,
   setFeedback,
@@ -198,6 +239,9 @@ function UnitCard({
 }: {
   activeCallTarget: string | null;
   busyUnitIds: Set<string>;
+  messagingEnabled: boolean;
+  messageThreads: MessageThread[];
+  onOpenMessages?: (target: MessageTarget) => void;
   originUnitId: string | null;
   setActiveCallTarget: (target: string | null) => void;
   setFeedback: (message: string | null) => void;
@@ -220,41 +264,88 @@ function UnitCard({
             {unit.type} - {unit.residents.join(', ')}
           </Text>
         </View>
-        <PhoneActionButton
-          accessibilityLabel={`Chamar unidade ${unit.label}`}
-          disabled={activeCallTarget !== null}
-          muted={!canCallUnit || isBusy}
-          testID={canCallUnit ? 'resident-call-unit' : 'resident-unit-unavailable'}
-          onPress={() => {
-            if (isBusy) {
-              showInfo('Unidade em atendimento', 'Esta unidade esta em atendimento. Tente novamente em alguns minutos.');
-              return;
-            }
+        <View style={styles.actionButtons}>
+          {messagingEnabled && originUnitId ? (
+            <MessageActionButton
+              accessibilityLabel={`Enviar mensagem para unidade ${unit.label}`}
+              disabled={activeCallTarget !== null}
+              testID="resident-message-unit"
+              unreadCount={originUnitId ? getResidentUnitUnreadCount(messageThreads, originUnitId, unit.id) : 0}
+              onPress={() =>
+                onOpenMessages?.({
+                  label: unit.label,
+                  originUnitId,
+                  targetType: 'UNIT',
+                  targetUnitId: unit.id,
+                })
+              }
+            />
+          ) : null}
+          <PhoneActionButton
+            accessibilityLabel={`Chamar unidade ${unit.label}`}
+            disabled={activeCallTarget !== null}
+            muted={!canCallUnit || isBusy}
+            testID={canCallUnit ? 'resident-call-unit' : 'resident-unit-unavailable'}
+            onPress={() => {
+              if (isBusy) {
+                showInfo('Unidade em atendimento', 'Esta unidade esta em atendimento. Tente novamente em alguns minutos.');
+                return;
+              }
 
-            if (!originUnitId || !canCallUnit) {
-              showInfo('Chamada indisponivel', helper);
-              return;
-            }
+              if (!originUnitId || !canCallUnit) {
+                showInfo('Chamada indisponivel', helper);
+                return;
+              }
 
-            handleResidentToUnitCall(
-              originUnitId,
-              unit.id,
-              unit.label,
-              user,
-              unitLabels,
-              setHistory,
-              setPendingCalls,
-              setFeedback,
-              setActiveCallTarget,
-            );
-          }}
-        />
+              handleResidentToUnitCall(
+                originUnitId,
+                unit.id,
+                unit.label,
+                user,
+                unitLabels,
+                setHistory,
+                setPendingCalls,
+                setFeedback,
+                setActiveCallTarget,
+              );
+            }}
+          />
+        </View>
       </View>
       <Text style={[styles.itemHelp, !isBusy && unit.canReceiveCalls ? styles.available : styles.unavailable]}>
         {activeCallTarget === unit.id ? 'Chamando...' : helper}
       </Text>
     </Card>
   );
+}
+
+async function refreshMessageBadges(setMessageThreads: (threads: MessageThread[]) => void) {
+  try {
+    setMessageThreads(await listMyMessageThreads());
+  } catch {
+    // Badge refresh is auxiliary and cannot disturb the interfone screen.
+  }
+}
+
+function getResidentGatehouseUnreadCount(threads: MessageThread[], originUnitId: string) {
+  return sumUnread(
+    threads.filter((thread) => thread.thread_type === 'PORTARIA_UNIT' && thread.unit_a_id === originUnitId),
+  );
+}
+
+function getResidentUnitUnreadCount(threads: MessageThread[], originUnitId: string, targetUnitId: string) {
+  return sumUnread(
+    threads.filter(
+      (thread) =>
+        thread.thread_type === 'UNIT_UNIT' &&
+        ((thread.unit_a_id === originUnitId && thread.unit_b_id === targetUnitId) ||
+          (thread.unit_a_id === targetUnitId && thread.unit_b_id === originUnitId)),
+    ),
+  );
+}
+
+function sumUnread(threads: MessageThread[]) {
+  return threads.reduce((total, thread) => total + thread.unread_count, 0);
 }
 
 function CallHistory({ calls, onCancel }: { calls: CallRecord[]; onCancel: (callId: string) => void }) {
@@ -793,5 +884,10 @@ const styles = StyleSheet.create({
   },
   cardAction: {
     marginTop: theme.spacing.md,
+  },
+  actionButtons: {
+    alignItems: 'center',
+    flexDirection: 'row',
+    gap: theme.spacing.sm,
   },
 });

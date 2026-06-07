@@ -1,21 +1,21 @@
 {
   "project_info": {
-    "project_number": "317113898429",
-    "project_id": "confia-interfone",
-    "storage_bucket": "confia-interfone.firebasestorage.app"
+    "project_number": "184747711197",
+    "project_id": "confia-system-prod",
+    "storage_bucket": "confia-system-prod.firebasestorage.app"
   },
   "client": [
     {
       "client_info": {
-        "mobilesdk_app_id": "1:317113898429:android:03b0eb42cc3e75bf31eed4",
+        "mobilesdk_app_id": "1:184747711197:android:ad30f3f37c1a1903051934",
         "android_client_info": {
-          "package_name": "br.com.confia.interfone"
+          "package_name": "br.com.confia.system"
         }
       },
       "oauth_client": [],
       "api_key": [
         {
-          "current_key": "AIzaSyCdAQP7FkBhTkcG8n_TMxdMWYIbgk_U0Fs"
+          "current_key": "AIzaSyDyRgR_Fq8XMSRMv7F3JOnQ3Av1vgzT1rI"
         }
       ],
       "services": {

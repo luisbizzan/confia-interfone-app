@@ -757,3 +757,316 @@ A estrategia inicial sera considerada pronta quando conseguirmos rodar, de forma
   - push de chamada deve usar canal Android `incoming-calls-v3`;
   - com app em background, validar vibracao e som `call_ringtone.wav`;
   - se continuar sem som, abrir configuracoes do app no Android e conferir se o canal `Chamadas recebidas` esta permitido com som.
+- Criterio para versao minima obrigatoria:
+  - versao esperada em Configuracoes no proximo build: `1.0.11 (18)`;
+  - backend deve conter tabela `app_version_policies`;
+  - com `minimum_build` menor ou igual ao build instalado, app libera login/uso;
+  - ao elevar temporariamente `minimum_build` acima do build instalado, app deve bloquear antes do login com tela `Atualizacao necessaria`;
+  - teste deve voltar `minimum_build` para valor valido ao terminar.
+- Criterio para escalonamento de chamada em unidade com mais de um morador:
+  - cadastrar dois moradores ativos na mesma unidade com `call_order` diferente;
+  - iniciar chamada para essa unidade;
+  - nao atender no primeiro morador por pelo menos 20 segundos;
+  - aguardar o `call-timeout-processor`;
+  - validar que `call_attempts` marca o primeiro como `NO_ANSWER` e cria tentativa `RINGING` para o segundo;
+  - validar que `app_call_diagnostics` registra `push_notification_dispatch` para a nova tentativa;
+  - no aparelho do segundo morador, validar chegada de push ou chamada visivel se o app estiver aberto.
+- Criterio visual de marca:
+  - app deve usar a paleta do `GOOGLE-PLAY-PREPARACAO.md`;
+  - azul principal `#0B4EA2`, azul claro `#1267C9`, vermelho `#E1272D`, texto escuro `#0B1F3A`;
+  - conferir Login, Home, Interfone, Chamada e Configuracoes;
+  - conferir splash e icone instalavel usando os assets `confia-system-logo-preview.png` e `confia-system-mark-preview.png`.
+- Criterio do APK com namespace definitivo:
+  - APK local: `C:\Projetos\Confia\apks\confia-system-1.0.11-18-preview-20260601.apk`;
+  - package Android esperado: `br.com.confia.system`;
+  - versao esperada em Configuracoes: `1.0.11 (18)`;
+  - app deve abrir como `Confia System` e usar icone/splash da nova marca;
+  - login deve continuar usando Supabase real pelas variaveis `EXPO_PUBLIC_SUPABASE_URL` e `EXPO_PUBLIC_SUPABASE_ANON_KEY`;
+  - push deve registrar token no novo app Firebase `confia-system`;
+  - se `minimum_build` no Supabase for maior que `18`, o app deve bloquear com tela de atualizacao obrigatoria;
+  - se `minimum_build` for menor ou igual a `18`, o app deve liberar login, Home e Interfone.
+- Criterio do APK com login corrigido:
+  - APK local: `C:\Projetos\Confia\apks\confia-system-1.0.11-18-login-logo-20260601.apk`;
+  - tela de login deve exibir a logo `Confia System`;
+  - tela de login nao deve exibir mais `Interfone Digital`;
+  - apos login, abrir Configuracoes e confirmar `Notificacoes: Token registrado`;
+  - se chamadas nao gerarem notificacao, validar no backend:
+    - existe registro recente em `app_push_tokens` para o usuario receptor com `app_version = 1.0.11` e `app_build = 18`;
+    - existe `native_push_provider = fcm`;
+    - `app_call_diagnostics` registra `push_notification_dispatch`;
+    - secret `FIREBASE_SERVICE_ACCOUNT_JSON` do Supabase pertence ao Firebase `confia-system`, nao ao projeto antigo `confia-interfone`.
+- Criterio do APK com Firebase definitivo:
+  - APK local: `C:\Projetos\Confia\apks\confia-system-1.0.11-18-firebase-prod-20260601.apk`;
+  - app Android deve usar Firebase `confia-system-prod`;
+  - package Android esperado: `br.com.confia.system`;
+  - app deve exibir `Confia System` como nome/label;
+  - depois de instalar, fazer logout/login em cada aparelho para registrar novo token;
+  - em Configuracoes, confirmar `Notificacoes: Token registrado`;
+  - testar chamada com receptor em primeiro plano, background e tela bloqueada;
+  - validar no Supabase `app_call_diagnostics` se `fcm_results` retorna sucesso para o projeto `confia-system-prod`.
+- Criterio do APK com correcao de provider FCM:
+  - APK local: `C:\Projetos\Confia\apks\confia-system-1.0.11-18-fcm-provider-fix-20260601.apk`;
+  - apos login, tokens Android novos devem registrar `native_push_provider = fcm`;
+  - tokens Android antigos com `native_push_provider = android` tambem devem ser considerados pela Edge Function;
+  - em `app_call_diagnostics`, `fcm_token_count` deve ser maior que zero quando houver receptor logado;
+  - `fcm_results` deve conter respostas do FCM, nao mais `reason = no_native_tokens`;
+  - `Expo Push` pode continuar retornando `InvalidCredentials`, mas o criterio de aceite deste fluxo e entrega pelo FCM nativo.
+- Criterio para ambiente Supabase Prod:
+  - ambiente Prod esperado: `https://mhcszjmnktzftcllrhce.supabase.co`;
+  - app publicavel deve usar `br.com.confia.system` e Firebase `confia-system-prod`;
+  - `.env` local de build publicavel deve estar com `EXPO_PUBLIC_ENABLE_ERROR_TEST=false`;
+  - primeiro login em cada aparelho deve registrar token em `app_push_tokens` no Prod;
+  - criar um condominio piloto no backoffice apontado para Prod antes do teste mobile;
+  - validar morador chamando portaria, portaria chamando morador e morador chamando outra unidade no Prod;
+  - validar chamada com receptor em primeiro plano, background e tela bloqueada;
+  - validar `app_call_diagnostics` no Prod para confirmar entrega FCM nativa;
+  - validar reporte automatico de erro no Prod apos login de um usuario real;
+  - confirmar que o erro cria registro em `app_error_reports` e issue no GitHub.
+- Criterio de separacao staging/producao:
+  - `develop` deve apontar para staging em testes internos;
+  - `main` deve apontar para production em builds de loja;
+  - APK local gerado para a pasta `C:\Projetos\Confia\apks` deve ser precedido por `npm run env:staging`;
+  - AAB de publicacao deve ser precedido por `npm run env:production`;
+  - antes de qualquer build, abrir `.env` e conferir a URL esperada do Supabase;
+  - Vercel Preview/Staging deve usar variaveis do Supabase staging;
+  - Vercel Production deve usar variaveis do Supabase production.
+- Criterio de validacao Vercel Production:
+  - apos qualquer alteracao de variaveis Production, executar redeploy;
+  - abrir `/configuracoes` em Production;
+  - resultado esperado: tela `Saude do ambiente` com status operacional;
+  - contador de condominios em Production deve refletir o Supabase Prod, inicialmente `0`;
+  - se aparecer `Unauthorized`, revisar `ADMIN_API_SECRET` em Vercel Production e Supabase Prod.
+- Criterio de validacao Vercel Preview/Staging:
+  - deploy staging deve ser gerado a partir do branch `develop`;
+  - variaveis `Preview (develop)` devem apontar para Supabase staging `uvdwoisdcikzhqjwbhog`;
+  - se aparecer `NEXT_PUBLIC_SUPABASE_URL is not configured`, o deploy provavelmente nao usou o branch `develop` ou foi criado antes das variaveis;
+  - apos ajustar variaveis Preview, fazer novo deploy do branch `develop`;
+  - resultado esperado em `/configuracoes`: ambiente operacional e contador com os condominios do staging.
+- Criterio do AAB de producao:
+  - antes do build, executar `npm run env:production`;
+  - executar `npm run typecheck`;
+  - gerar com `cd android && .\gradlew.bat bundleRelease`;
+  - arquivo esperado: `C:\Projetos\Confia\apks\confia-system-1.0.11-18-production-20260601.aab`;
+  - confirmar assinatura com `jarsigner -verify`;
+  - apos o build, executar `npm run env:staging`;
+  - subir inicialmente no Google Play em teste interno ou fechado;
+  - validar instalacao via Play Store antes de promover para producao.
+- Criterio da politica de privacidade:
+  - URL esperada: `https://confia-interfone-digital-admin-web.vercel.app/politica-de-privacidade`;
+  - a pagina deve abrir sem sessao do backoffice;
+  - a pagina nao deve redirecionar para `/login`;
+  - validar que o texto contem dados tratados, finalidades, seguranca, retencao, direitos LGPD e contato;
+  - validar responsividade em mobile e desktop;
+  - usar essa URL no campo de Politica de Privacidade do Google Play Console.
+- Criterio da branch Android native call:
+  - branch esperada: `feature/android-native-call-service`;
+  - versao esperada no app: `1.0.12 (19)`;
+  - APK experimental de staging confirmado: `C:\Projetos\Confia\apks\confia-system-1.0.12-19-decline-background-STAGING-CONFIRMED-20260606.apk`;
+  - `.env` do APK experimental deve apontar para Supabase staging `uvdwoisdcikzhqjwbhog`;
+  - antes de entregar APK local, validar `android/app/build/intermediates/assets/release/mergeReleaseAssets/app.config`;
+  - `app.config` deve conter `supabaseUrl = https://uvdwoisdcikzhqjwbhog.supabase.co`;
+  - se `app.config` contiver `mhcszjmnktzftcllrhce`, o APK foi gerado para producao e deve ser descartado para testes develop;
+  - Manifest nao deve conter `VoiceConnectionService` nem `react-native-callkeep`;
+  - Manifest nao deve conter `ExpoFirebaseMessagingService` nesta branch experimental;
+  - Manifest nao deve conter permissao `READ_PHONE_NUMBERS`;
+  - Manifest deve conter `ConfiaFirebaseMessagingService`, `ConfiaCallActionReceiver` e `USE_FULL_SCREEN_INTENT`;
+  - chamada FCM data-only com `kind = incoming_call` deve acionar notificacao nativa de chamada;
+  - notificacao deve aparecer com prioridade alta/full-screen quando o aparelho permitir;
+  - notificacao deve usar template nativo `CallStyle` quando o Android/fabricante permitir;
+  - notificacao deve exibir acoes `Atender` e `Recusar` quando o fabricante permitir;
+  - tocar em `Atender` deve abrir o app na area de Interfone e executar `answer_call`/`answer_portaria_call`;
+  - tocar em `Recusar` deve executar `decline_call` no Supabase staging;
+  - tocar em `Recusar` na notificacao nativa nao deve abrir o app;
+  - tocar em `Recusar` deve remover a notificacao da tela e da central de notificacoes;
+  - apos `Recusar`, validar em `app_call_diagnostics` um registro `native_decline_call` com `SUCCESS` quando o receptor tinha sessao sincronizada;
+  - se houver mais de um morador na unidade chamada, `Recusar` pelo primeiro morador deve gerar nova tentativa e novo push para o proximo morador;
+  - apos tocar em `Atender` ou `Recusar`, a notificacao nativa deve desaparecer da tela e da central de notificacoes;
+  - erro `Call not found or not ringing` nao deve ser exibido ao usuario em texto tecnico;
+  - erros reais dos botoes de notificacao devem gerar `reportAppError` com `source = call-action-error`;
+  - se a portaria recusar, a chamada deve sair da tela do originador como cancelada/encerrada;
+  - se um morador recusar e houver outro morador na mesma unidade com ordem posterior, o proximo morador deve receber a tentativa;
+  - se os botoes aparecerem mas nao acionarem o app, validar se o APK instalado e `decline-callstyle-STAGING-CONFIRMED-20260606` ou posterior;
+  - validar app aberto, segundo plano, tela bloqueada, Samsung e Xiaomi;
+  - validar em `app_call_diagnostics` que o push FCM foi enviado e que o app receptor registrou novo token depois de logar.
+- Criterio do modulo de mensagens:
+  - feature flag `MESSAGING` deve estar habilitado para o condominio de teste;
+  - na Home/Interfone, cards de Portaria e Unidades devem exibir botao circular de mensagem ao lado do botao de ligacao;
+  - morador deve abrir conversa com a portaria pelo botao de mensagem do card `Portaria`;
+  - portaria deve abrir conversa com uma unidade pelo botao de mensagem da lista de unidades;
+  - morador deve abrir conversa com outra unidade pelo botao de mensagem da lista de unidades;
+  - morador nao deve abrir conversa consigo mesmo;
+  - usuario nao deve listar ou abrir conversas de outro condominio;
+  - envio de texto deve persistir em `messages` e aparecer na conversa apos atualizar;
+  - envio de imagem/anexo deve subir arquivo para o bucket `message-attachments`;
+  - anexo maior que 10 MB deve ser bloqueado antes do envio ou rejeitado pelo backend/storage;
+  - preview de imagem deve usar URL assinada, sem expor bucket publico;
+  - cada conversa portaria-unidade deve reutilizar a mesma thread;
+  - cada conversa unidade-unidade deve reutilizar a mesma thread independentemente de quem iniciou;
+  - nova mensagem deve chamar a Edge Function `send-message-notification`;
+  - receptor com app aberto deve receber atualizacao ao abrir a tela de mensagens;
+  - receptor com app em background deve receber notificacao de nova mensagem quando houver token push registrado;
+  - tocar na notificacao de mensagem deve abrir a tela `Mensagens`;
+  - `cleanup_expired_message_attachments` deve marcar anexos vencidos como apagados e remover objetos do Storage;
+  - agendamento `cleanup-expired-message-attachments` deve existir no Supabase e executar diariamente a limpeza;
+  - teste de retencao deve criar anexo com `expires_at` anterior a data atual e executar a RPC de limpeza;
+  - APK local para teste inicial:
+    - `C:\Projetos\Confia\apks\confia-system-1.0.13-20-messaging-STAGING-CONFIRMED-20260606.apk`;
+    - versao esperada em Configuracoes: `1.0.13 (20)`;
+    - ambiente esperado: Supabase staging `uvdwoisdcikzhqjwbhog`;
+  - Playwright web pode validar login, botoes, lista de conversas, envio de texto e abertura da tela;
+  - anexos e notificacoes devem ser complementados com teste nativo Android, porque dependem de seletor de midia, Storage e push.
+  - hotfix 06/06/2026:
+    - APK local para reteste:
+      - `C:\Projetos\Confia\apks\confia-system-1.0.14-21-message-notification-attachment-STAGING-CONFIRMED-20260606.apk`;
+      - versao esperada em Configuracoes: `1.0.14 (21)`;
+      - ambiente esperado: Supabase staging `uvdwoisdcikzhqjwbhog`;
+    - upload de imagem/anexo no Android deve funcionar sem erro `Network request failed`;
+    - envio de mensagem deve acionar `send-message-notification` com sessao autenticada;
+    - receptor em outra tela do app deve receber notificacao/atualizacao de mensagem;
+    - receptor em background deve receber notificacao nativa de mensagem;
+    - tocar na notificacao de mensagem deve abrir a aba `Mensagens`;
+    - se a notificacao de mensagem nao aparecer, validar no Supabase:
+      - token push registrado para o usuario receptor;
+      - Edge Function `send-message-notification` executada sem erro;
+      - payload FCM com `kind = message`.
+  - hotfix complementar 06/06/2026:
+    - consulta de servidor confirmou 2 arquivos `.jpg` orfaos no bucket `message-attachments` apos falha de envio;
+    - consulta de servidor confirmou `message_notification_dispatch` com erro `Invalid message_id`;
+    - APK local para reteste:
+      - `C:\Projetos\Confia\apks\confia-system-1.0.15-22-message-attachment-pushfix-STAGING-CONFIRMED-20260606.apk`;
+      - versao esperada em Configuracoes: `1.0.15 (22)`;
+      - ambiente esperado: Supabase staging `uvdwoisdcikzhqjwbhog`;
+    - teste de anexo deve validar:
+      - arquivo selecionado aparece como pendente;
+      - ao tocar em enviar, uma nova mensagem com anexo aparece na conversa;
+      - tabela `message_attachments` recebe uma linha para o anexo;
+      - bucket `message-attachments` recebe o objeto;
+      - se o envio falhar apos upload, o app remove o objeto do Storage;
+    - teste de notificacao deve validar:
+      - `app_call_diagnostics.action = message_notification_dispatch` com `result = SUCCESS`;
+      - receptor em outra tela recebe notificacao;
+      - receptor em background recebe notificacao;
+      - tocar na notificacao abre a aba `Mensagens`.
+  - hotfix de envio e tela de mensagens 06/06/2026:
+    - consulta de servidor confirmou novas mensagens persistidas e novas falhas de push por `Invalid message_id`;
+    - consulta de servidor confirmou novos objetos `.jpg` no bucket `message-attachments`, portanto o teste deve diferenciar upload no Storage de vinculacao real em `message_attachments`;
+    - APK local para reteste:
+      - `C:\Projetos\Confia\apks\confia-system-1.0.16-23-message-send-layout-pushfix-STAGING-CONFIRMED-20260606.apk`;
+      - versao esperada em Configuracoes: `1.0.16 (23)`;
+      - ambiente esperado: Supabase staging `uvdwoisdcikzhqjwbhog`;
+    - teste de texto deve validar:
+      - apos tocar em enviar, o campo de texto fica vazio;
+      - a mensagem aparece uma unica vez do lado correto;
+      - `messages.id` usado no push e um UUID real;
+      - `app_call_diagnostics.action = message_notification_dispatch` registra `SUCCESS`;
+    - teste de anexo deve validar:
+      - arquivo selecionado aparece como pendente;
+      - apos tocar em enviar, o anexo pendente desaparece do composer;
+      - `storage.objects` recebe o objeto;
+      - `message_attachments` recebe uma linha vinculada a `message_id`;
+      - receptor visualiza ou recebe link/preview do anexo na conversa;
+      - se o envio falhar depois do upload, o objeto nao deve permanecer orfao no Storage;
+    - teste visual deve validar:
+      - nao existe espaco vazio grande abaixo do input;
+      - teclado nao encobre o composer;
+      - navegacao inferior continua acessivel;
+      - tela funciona em morador e portaria.
+  - hotfix de legenda/anexo e push de mensagem 06/06/2026:
+    - APK local para reteste:
+      - `C:\Projetos\Confia\apks\confia-system-1.0.17-24-message-attachment-caption-notification-STAGING-CONFIRMED-20260606.apk`;
+      - versao esperada em Configuracoes: `1.0.17 (24)`;
+      - ambiente esperado: Supabase staging `uvdwoisdcikzhqjwbhog`;
+    - teste de anexo sem texto:
+      - tocar no clipe;
+      - selecionar uma imagem;
+      - validar preview do anexo no composer;
+      - nao digitar legenda;
+      - tocar em enviar;
+      - validar que a mensagem com anexo aparece na conversa;
+      - validar que `message_attachments` recebeu linha vinculada ao `message_id`;
+      - validar que o receptor visualiza o anexo;
+    - teste de anexo com legenda:
+      - selecionar imagem;
+      - digitar legenda;
+      - enviar;
+      - validar texto e imagem na mesma mensagem;
+    - teste de remocao de anexo:
+      - selecionar imagem;
+      - tocar no botao remover;
+      - validar que o preview desaparece;
+      - validar que o objeto previamente enviado ao Storage foi removido;
+    - teste de notificacao de mensagem:
+      - enviar texto simples;
+      - enviar anexo sem texto;
+      - enviar anexo com legenda;
+      - em todos os casos, validar `app_call_diagnostics.action = message_notification_dispatch`;
+      - resultado esperado: `SUCCESS`;
+      - `metadata.fcm_token_count` deve ser maior que zero quando o receptor tiver token registrado;
+      - receptor em background deve receber notificacao nativa de mensagem;
+      - tocar na notificacao deve abrir a aba `Mensagens`;
+      - se voltar `Invalid message_id`, validar se o app instalado e de fato `1.0.17 (24)` ou posterior.
+  - hotfix de UX de mensagens, preview e notificacao 06/06/2026:
+    - APK local para reteste:
+      - `C:\Projetos\Confia\apks\confia-system-1.0.18-25-messages-notification-image-preview-STAGING-20260606.apk`;
+      - versao esperada em Configuracoes: `1.0.18 (25)`;
+      - ambiente esperado: Supabase staging `uvdwoisdcikzhqjwbhog`;
+    - teste de anexo sem legenda:
+      - tocar no clipe;
+      - selecionar uma imagem;
+      - validar preview no composer com texto de legenda opcional;
+      - nao digitar texto;
+      - tocar no botao enviar;
+      - validar que a mensagem e criada com imagem mesmo sem legenda;
+      - validar que o input continua vazio apos o envio.
+    - teste de preview de imagem:
+      - tocar em uma imagem enviada ou recebida;
+      - validar abertura em tela cheia;
+      - tocar no botao fechar;
+      - validar retorno para a conversa sem perder scroll/contexto.
+    - teste de estabilidade da conversa:
+      - deixar a tela de conversa aberta por pelo menos 20 segundos;
+      - validar que o polling nao causa reload visual quando nao ha novas mensagens;
+      - validar que imagens ja exibidas nao piscam ou voltam para estado de carregamento.
+    - teste de badge de mensagens no Interfone:
+      - enviar mensagem de uma unidade para outra ou da portaria para unidade;
+      - entrar na tela Interfone do destinatario;
+      - validar badge numerico no botao de mensagem do card correspondente;
+      - abrir a conversa e validar que o badge reduz/some depois da leitura.
+    - teste de notificacao de mensagem:
+      - enviar texto simples;
+      - enviar anexo sem legenda;
+      - enviar anexo com legenda;
+      - validar `app_call_diagnostics.action = message_notification_dispatch`;
+      - resultado esperado: `SUCCESS`;
+      - `metadata.fcm_token_count` deve ser maior que zero quando o receptor tiver token registrado;
+      - receptor em background deve receber notificacao nativa de mensagem;
+      - tocar na notificacao deve abrir a aba `Mensagens`.
+  - micro-hotfix de foco na conversa 07/06/2026:
+    - teste de abertura por botao de mensagem:
+      - abrir a tela Interfone;
+      - tocar no botao de mensagem de uma unidade ou portaria;
+      - validar que a conversa abre no final da lista;
+      - validar que o input `Escreva uma mensagem` recebe foco automaticamente.
+    - teste de abertura pela lista de conversas:
+      - abrir a aba Mensagens;
+      - selecionar uma conversa com historico longo;
+      - validar que a tela rola para a ultima mensagem;
+      - validar que nao e necessario rolar manualmente ate o composer.
+  - refatoracao de layout da conversa 07/06/2026:
+    - teste de composer fixo:
+      - abrir uma conversa com historico longo e imagens;
+      - validar que o header da conversa permanece no topo da area de mensagens;
+      - validar que apenas a lista de mensagens rola;
+      - validar que o campo `Escreva uma mensagem` permanece visivel no rodape da tela de conversa.
+    - teste com teclado aberto:
+      - abrir a conversa;
+      - validar foco automatico no input;
+      - validar que o teclado abre sem esconder o composer;
+      - digitar uma mensagem longa;
+      - validar que a barra inferior do app nao sobrepoe o input.
+    - teste de anexo pendente:
+      - tocar no clipe;
+      - selecionar imagem;
+      - validar que o preview do anexo aparece acima do composer;
+      - validar que a lista de mensagens continua rolavel independentemente do anexo pendente;
+      - enviar o anexo com ou sem legenda e validar que o composer permanece fixo.

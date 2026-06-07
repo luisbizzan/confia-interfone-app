@@ -356,7 +356,7 @@ Entregas iniciadas:
   - `developmentClient = true`;
   - `distribution = internal`;
   - `android.buildType = apk`.
-- Identificador Android definido para o app:
+- Identificador Android inicial definido para o app:
   - `br.com.confia.interfone`.
 - Projeto vinculado ao EAS:
   - conta `luisbizzan`;
@@ -766,11 +766,305 @@ Implementado em 25/05/2026 para a etapa Android de chamada nativa:
   - APK local gerado:
     - `C:\Projetos\Confia\apks\confia-interfone-sound-channel-v3-20260525.apk`;
   - instalacao via ADB nao executada porque nenhum aparelho apareceu conectado no momento.
+- Atualizacao obrigatoria por versao minima em 26/05/2026:
+  - criada tabela backend `app_version_policies` no projeto Supabase atual;
+  - app passa a consultar a politica no boot antes de liberar login/uso;
+  - se `versionCode` instalado estiver abaixo de `minimum_build`, o app bloqueia com tela de `Atualizacao necessaria`;
+  - Configuracoes passa a exibir status da politica de atualizacao;
+  - versao do app atualizada para `1.0.11 (18)`;
+  - politica inicial Android mantem minimo `1.0.10 (17)` para nao bloquear o APK estavel validado, e marca `1.0.11 (18)` como ultima versao esperada.
+- Timeout com proximo morador em 26/05/2026:
+  - `call-timeout-processor` deixou de apenas chamar o RPC geral e passou a processar chamadas expiradas uma a uma;
+  - quando `process_call_timeout` cria uma nova tentativa para o proximo morador da unidade, o processor chama `send-call-notification` em modo de servico;
+  - `send-call-notification` passou a aceitar chamada interna autenticada por `x-cron-secret`, sem depender de usuario logado;
+  - diagnosticos de push podem registrar `user_id` nulo quando o acionador e o sistema;
+  - objetivo: se o morador 1 nao atender em 20 segundos, o morador 2 recebe push da mesma chamada.
+- Ajuste visual de marca em 26/05/2026:
+  - paleta global do app alinhada ao `GOOGLE-PLAY-PREPARACAO.md`;
+  - cores aplicadas: azul principal `#0B4EA2`, azul claro `#1267C9`, vermelho `#E1272D`, texto escuro `#0B1F3A`;
+  - tela de chamada e feedbacks passaram a usar a identidade `Confia System`.
+  - `app.json` passou a usar `assets/confia-system-mark-preview.png` como icone/adaptive icon e `assets/confia-system-logo-preview.png` no splash;
+  - nome exibido do app alterado para `Confia System`.
+- Namespace definitivo para loja em 01/06/2026:
+  - package Android alterado de `br.com.confia.interfone` para `br.com.confia.system`;
+  - `namespace` e `applicationId` nativos atualizados em `android/app/build.gradle`;
+  - pacotes Kotlin nativos atualizados para `br.com.confia.system`;
+  - `google-services.json` da raiz e `android/app/google-services.json` substituidos pelo app Firebase `confia-system`;
+  - novo Firebase Android validado com `package_name = br.com.confia.system`;
+  - nome nativo Android e root project atualizados para `Confia System`.
+- APK de validacao gerado em 01/06/2026:
+  - versao do app: `1.0.11 (18)`;
+  - package Android: `br.com.confia.system`;
+  - Firebase Android: projeto `confia-system`;
+  - logo, icone, splash e paleta alinhados ao documento `GOOGLE-PLAY-PREPARACAO.md`;
+  - politica de versao minima ativa via tabela `app_version_policies`;
+  - APK local para teste:
+    - `C:\Projetos\Confia\apks\confia-system-1.0.11-18-preview-20260601.apk`.
+- Correcao visual de login em 01/06/2026:
+  - tela de login deixou de usar texto solto `Confia`/`Interfone Digital`;
+  - login passou a exibir a logo `Confia System` dos assets do projeto;
+  - titulo da tela alterado para `Confia System`;
+  - APK local gerado para reteste:
+    - `C:\Projetos\Confia\apks\confia-system-1.0.11-18-login-logo-20260601.apk`.
+- Diagnostico de push apos troca do package em 01/06/2026:
+  - APK Android usa Firebase `confia-system` e package `br.com.confia.system`;
+  - arquivo de service account local disponivel ainda e do projeto antigo `confia-interfone`;
+  - para envio FCM nativo em producao, o secret `FIREBASE_SERVICE_ACCOUNT_JSON` do Supabase deve ser atualizado com service account do projeto Firebase `confia-system`;
+  - apos instalar o package novo, cada aparelho precisa logar novamente para registrar novo token em `app_push_tokens`.
+- Firebase definitivo em 01/06/2026:
+  - projetos Firebase antigos `confia-interfone` e `confia-system` foram removidos pelo usuario;
+  - projeto Firebase mantido: `confia-system-prod`;
+  - `google-services.json` da raiz e `android/app/google-services.json` atualizados para `confia-system-prod`;
+  - secret Supabase `FIREBASE_SERVICE_ACCOUNT_JSON` atualizado com service account do Firebase `confia-system-prod`;
+  - Edge Function `send-call-notification` redeployada no projeto Supabase atual;
+  - APK local gerado:
+    - `C:\Projetos\Confia\apks\confia-system-1.0.11-18-firebase-prod-20260601.apk`.
+- Correcao de push FCM em 01/06/2026:
+  - diagnostico real mostrou `Expo Push` retornando `InvalidCredentials`;
+  - diagnostico real mostrou `fcm_results.reason = no_native_tokens`, apesar de os aparelhos terem token nativo;
+  - causa: `expo-notifications` registra `native_push_provider = android`, e a Edge Function filtrava apenas `fcm`;
+  - `send-call-notification` passou a tratar `android` e `fcm` como provedores FCM validos;
+  - app passou a normalizar novos registros de token Android como `fcm`;
+  - Edge Function `send-call-notification` redeployada;
+  - APK local gerado:
+    - `C:\Projetos\Confia\apks\confia-system-1.0.11-18-fcm-provider-fix-20260601.apk`.
+- Ambiente Supabase de producao em 01/06/2026:
+  - projeto Prod criado no Supabase com nome `Confia System`;
+  - ref Prod: `mhcszjmnktzftcllrhce`;
+  - URL Prod: `https://mhcszjmnktzftcllrhce.supabase.co`;
+  - migrations e Edge Functions aplicadas no Prod;
+  - secrets principais configurados no Prod para admin, cron, LiveKit e Firebase `confia-system-prod`;
+  - `.env` local do app passou a apontar para o Supabase Prod;
+  - botao de simulacao de erro foi desativado no `.env` local para build publicavel;
+  - `GITHUB_TOKEN` configurado no Supabase Prod para abertura automatica de issue em erros do app;
+  - pendencia: validar abertura real de issue apos criar/logar usuario no ambiente Prod.
+- Estrategia de ambientes e branches em 01/06/2026:
+  - repositorio do app recebeu branch remoto `develop`;
+  - repositorio do backend/backoffice recebeu branch remoto `develop`;
+  - `develop` passa a ser o branch de evolucao e staging;
+  - `main` passa a ser o branch de producao e publicacao;
+  - `.env` do app voltou a apontar para staging por padrao;
+  - criados `.env.staging` e `.env.production`;
+  - criado script `scripts/switch-env.ps1`;
+  - `npm run env:staging` prepara APK interno/staging;
+  - `npm run env:production` prepara build de loja/producao;
+  - regra definida: APK local em `C:\Projetos\Confia\apks` aponta para staging, build de loja aponta para production.
+- Ajuste Vercel Production em 01/06/2026:
+  - variaveis antigas de Production apontavam para configuracao anterior;
+  - `SUPABASE_URL`, `NEXT_PUBLIC_SUPABASE_URL`, `NEXT_PUBLIC_SUPABASE_ANON_KEY` e `ADMIN_API_SECRET` foram recriadas em Production;
+  - Production agora aponta para Supabase Prod `mhcszjmnktzftcllrhce`;
+  - necessario redeploy do Vercel Production para carregar os novos valores.
+- Ajuste Vercel Preview/Staging em 01/06/2026:
+  - Preview exibiu `NEXT_PUBLIC_SUPABASE_URL is not configured` em um deploy que nao recebeu as variaveis do branch `develop`;
+  - variaveis `Preview (develop)` foram restauradas para Supabase staging `uvdwoisdcikzhqjwbhog`;
+  - regra operacional reforcada: staging deve ser gerado a partir do branch `develop`.
+- Build Android de loja em 01/06/2026:
+  - app alternado para `.env.production` antes do build;
+  - `typecheck` executado com sucesso;
+  - criada keystore de upload local em `android/app/confia-system-upload-key.jks`;
+  - criada configuracao local de assinatura em `android/keystore.properties`, ignorada pelo Git;
+  - `android/app/build.gradle` ajustado para usar assinatura release quando a keystore local existir;
+  - AAB de producao gerado com sucesso via `gradlew bundleRelease`;
+  - artefato copiado para `C:\Projetos\Confia\apks\confia-system-1.0.11-18-production-20260601.aab`;
+  - assinatura validada com `jarsigner`;
+  - `.env` local retornou para staging apos o build.
+- Politica de privacidade publica em 02/06/2026:
+  - criada rota publica `/politica-de-privacidade` no backoffice web;
+  - middleware liberado para acesso sem login;
+  - conteudo cobre LGPD, dados tratados, finalidades, compartilhamento, seguranca, retencao, direitos do titular e contato;
+  - `npm run lint` e `npm run build` executados com sucesso;
+  - URL prevista para Google Play: `https://confia-interfone-digital-admin-web.vercel.app/politica-de-privacidade`.
+- Refatoracao de chamada nativa Android iniciada em 04/06/2026:
+  - criada branch `feature/android-native-call-service` a partir da `develop`;
+  - estrategia alterada para nao depender de `react-native-callkeep` nesta primeira etapa;
+  - dependencia `react-native-callkeep` removida do app;
+  - criado servico nativo Android `ConfiaFirebaseMessagingService` para receber FCM data-only de chamadas;
+  - criada notificacao nativa full-screen via `NotificationCompat` com categoria de chamada, som, vibracao e acoes `Atender`/`Recusar`;
+  - criado `ConfiaCallActionReceiver` para encaminhar acoes da notificacao para a `MainActivity`;
+  - criado modulo React Native `ConfiaNativeCalls` para o JS consumir a acao nativa inicial;
+  - app passa a consumir acao nativa `answer`, `decline` ou `open` quando abre pela notificacao;
+  - Manifest Android passou a declarar `USE_FULL_SCREEN_INTENT` e o servico FCM nativo;
+  - o servico FCM do Expo foi removido do Manifest nesta branch experimental para evitar disputa de recebedor FCM;
+  - build experimental versionado como `1.0.12 (19)`;
+  - `npm run typecheck` e `gradlew :app:compileDebugKotlin` passaram com sucesso.
+- APK experimental de staging em 04/06/2026:
+  - `gradlew assembleRelease` executado com sucesso;
+  - artefato gerado em `C:\Projetos\Confia\apks\confia-system-1.0.12-19-native-fcm-fullscreen-staging-20260604.apk`;
+  - `.env` usado no build aponta para Supabase staging `uvdwoisdcikzhqjwbhog`;
+  - Manifest release validado sem `CallKeep`, sem `VoiceConnectionService`, sem `ExpoFirebaseMessagingService` e sem `READ_PHONE_NUMBERS`;
+  - Manifest release contem `USE_FULL_SCREEN_INTENT`, `ConfiaFirebaseMessagingService` e `ConfiaCallActionReceiver`;
+  - nao havia aparelho ADB conectado no momento da geracao, entao a instalacao automatica ficou pendente.
+- Correcao do APK experimental de staging em 04/06/2026:
+  - usuario identificou que o APK anterior nao autenticava com usuarios do ambiente develop;
+  - confirmamos que o `.env` estava em staging, mas o `app.config` embutido no APK havia sido gerado com Supabase Prod por cache/ambiente do Gradle;
+  - build refeita exportando explicitamente `EXPO_PUBLIC_SUPABASE_URL`, `EXPO_PUBLIC_SUPABASE_ANON_KEY` e `EXPO_PUBLIC_ENABLE_ERROR_TEST` no mesmo processo do Gradle;
+  - `app.config` gerado pelo Gradle foi validado com `supabaseUrl = https://uvdwoisdcikzhqjwbhog.supabase.co`;
+  - APK correto copiado para `C:\Projetos\Confia\apks\confia-system-1.0.12-19-native-fcm-fullscreen-STAGING-CONFIRMED-20260604.apk`;
+  - regra reforcada: todo APK local para testes deve validar o `app.config` gerado antes de ser entregue.
+- Correcao dos botoes da notificacao nativa em 05/06/2026:
+  - teste do usuario confirmou que a notificacao chegava com botoes `Atender` e `Recusar`, mas os botoes nao executavam acao;
+  - `PendingIntent` dos botoes foi alterado para abrir a `MainActivity` diretamente, sem depender do `BroadcastReceiver`;
+  - app passou a consumir acoes nativas em polling curto enquanto autenticado para capturar `onNewIntent` quando a Activity ja estiver em memoria;
+  - `npm run typecheck` e `gradlew :app:compileDebugKotlin` passaram;
+  - APK staging confirmado gerado em `C:\Projetos\Confia\apks\confia-system-1.0.12-19-native-actions-STAGING-CONFIRMED-20260605.apk`;
+  - `app.config` do build validado com Supabase staging `uvdwoisdcikzhqjwbhog`.
+- Ajuste de recusa e template nativo de chamada em 06/06/2026:
+  - teste do usuario confirmou que `Recusar` abria o app, mas nao recusava a chamada corretamente;
+  - backend staging recebeu migration `20260606093000_add_decline_call.sql`;
+  - criada RPC `decline_call(p_call_id uuid)` para o destinatario recusar uma chamada;
+  - se a portaria recusar, a chamada e encerrada como `CANCELLED`;
+  - se um morador recusar e houver proximo morador na ordem, a tentativa atual e marcada como `FAILED` e uma nova tentativa `RINGING` e criada para o proximo morador;
+  - app passou a chamar `decline_call` nos caminhos de notificacao Expo e notificacao nativa;
+  - quando `decline_call` mantem a chamada em `RINGING`, o app dispara push para a proxima tentativa;
+  - notificacao Android passou a usar `NotificationCompat.CallStyle.forIncomingCall`, aproximando o comportamento visual do template nativo de chamadas;
+  - `npm run typecheck` e `gradlew :app:compileDebugKotlin` passaram;
+  - APK staging confirmado gerado em `C:\Projetos\Confia\apks\confia-system-1.0.12-19-decline-callstyle-STAGING-CONFIRMED-20260606.apk`.
+- Ajuste de notificacao presa e tratamento de erro em 06/06/2026:
+  - teste do usuario confirmou que a notificacao `CallStyle` ficava presa apos `Recusar`;
+  - modulo nativo `ConfiaNativeCalls` passou a cancelar a notificacao ao consumir qualquer acao nativa;
+  - caminhos JS de `Atender` e `Recusar` tambem chamam `dismissNativeIncomingCall` antes de executar a RPC;
+  - erro idempotente `Call not found or not ringing` passou a ser tratado como estado ja resolvido, sem mensagem tecnica para o usuario;
+  - erros reais em `Atender`/`Recusar` por notificacao agora chamam `reportAppError` com `callId` e acao, para gerar registro/issue conforme configuracao do backend;
+  - `npm run typecheck` e `gradlew :app:compileDebugKotlin` passaram;
+  - APK staging confirmado gerado em `C:\Projetos\Confia\apks\confia-system-1.0.12-19-dismiss-error-report-STAGING-CONFIRMED-20260606.apk`.
+- Recusa nativa sem abrir o app em 06/06/2026:
+  - teste do usuario confirmou que `Recusar` passou a cancelar a chamada, mas ainda abria o app;
+  - app passou a sincronizar credenciais minimas do Supabase com o modulo nativo Android apos login e limpar essas credenciais no logout;
+  - notificacao `CallStyle` manteve `Atender` abrindo a `MainActivity`, pois o usuario precisa entrar na experiencia de audio;
+  - botao `Recusar` passou a usar `BroadcastReceiver`, sem abrir a `MainActivity`;
+  - receiver nativo cancela a notificacao imediatamente e executa `decline_call` via REST autenticado;
+  - se `decline_call` mantiver a chamada como `RINGING` para o proximo morador da unidade, o receiver chama `send-call-notification` para disparar a proxima tentativa;
+  - receiver registra diagnostico em `app_call_diagnostics` quando possivel;
+  - `npm run typecheck` e `gradlew :app:compileDebugKotlin` passaram;
+  - `gradlew assembleRelease` passou;
+  - `app.config` do build validado com Supabase staging `uvdwoisdcikzhqjwbhog`;
+  - APK staging confirmado gerado em `C:\Projetos\Confia\apks\confia-system-1.0.12-19-decline-background-STAGING-CONFIRMED-20260606.apk`.
+- Modulo de mensagens com anexos em 06/06/2026:
+  - definido escopo do recurso para demonstracao ao cliente:
+    - portaria envia mensagens para moradores/unidades;
+    - moradores enviam mensagens para a portaria;
+    - moradores enviam mensagens para outras unidades/moradores cadastrados no mesmo condominio;
+    - botao de mensagem fica ao lado do botao de ligacao, reaproveitando o layout operacional;
+    - anexos sao limitados a 10 MB por arquivo;
+    - anexos ficam em bucket privado e possuem retencao de 90 dias;
+    - agendador/backend deve executar limpeza dos anexos expirados;
+  - backend staging recebeu migration `20260606133000_add_messaging_module.sql`;
+  - criado feature flag `MESSAGING` para condominios existentes;
+  - criado bucket privado `message-attachments` no Supabase Storage;
+  - criadas tabelas:
+    - `message_threads`;
+    - `messages`;
+    - `message_attachments`;
+    - `message_reads`;
+  - criadas RPCs seguras para o app:
+    - `get_or_create_message_thread`;
+    - `list_my_message_threads`;
+    - `get_thread_messages`;
+    - `send_message`;
+    - `cleanup_expired_message_attachments`;
+  - threads seguem a regra:
+    - uma conversa unica entre portaria e unidade;
+    - uma conversa unica por par de unidades;
+  - criado envio de push de nova mensagem via Edge Function `send-message-notification`;
+  - criado agendamento `cleanup-expired-message-attachments` via `pg_cron`, executando diariamente `cleanup_expired_message_attachments` para limpar anexos vencidos;
+  - app ganhou servico `src/services/messages.ts` para:
+    - criar ou abrir conversa;
+    - listar conversas;
+    - carregar mensagens;
+    - enviar texto;
+    - selecionar e subir imagem/anexo para o Storage;
+    - acionar push de nova mensagem;
+  - app ganhou tela `MessageCenterScreen` com:
+    - lista de conversas;
+    - conversa por mensagens;
+    - envio de texto;
+    - envio de imagem/anexo inicial;
+    - preview de imagem por URL assinada;
+  - app ganhou `MessageActionButton` nos cards de portaria e unidades;
+  - navegacao inferior passa a exibir `Mensagens` quando `MESSAGING` estiver habilitado;
+  - notificacao de mensagem abre diretamente a tela de mensagens;
+  - `npm run typecheck` passou em 06/06/2026.
+  - APK staging confirmado gerado em `C:\Projetos\Confia\apks\confia-system-1.0.13-20-messaging-STAGING-CONFIRMED-20260606.apk`.
+- Hotfix de mensagens/anexos em 06/06/2026:
+  - corrigido upload de imagem/anexo no Android, substituindo `fetch(file://...).blob()` por leitura via `expo-file-system/legacy`;
+  - corrigido envio de push de mensagem para chamar a Edge Function com JWT explicito da sessao logada;
+  - criado notificador nativo Android para `kind = message`, com canal proprio `Mensagens`;
+  - FCM nativo agora diferencia `incoming_call` e `message`;
+  - toque na notificacao de mensagem abre o app na aba `Mensagens`;
+  - `npm run typecheck` passou;
+  - `gradlew :app:compileDebugKotlin` passou;
+  - `gradlew assembleRelease` passou;
+  - `app.config` do build validado com Supabase staging `uvdwoisdcikzhqjwbhog`;
+  - APK staging confirmado gerado em `C:\Projetos\Confia\apks\confia-system-1.0.14-21-message-notification-attachment-STAGING-CONFIRMED-20260606.apk`.
+- Hotfix complementar de mensagens/anexos em 06/06/2026:
+  - consulta no Supabase staging confirmou 2 objetos `.jpg` no bucket `message-attachments` criados no teste das 14:34/14:35;
+  - consulta confirmou que esses 2 objetos nao tinham linhas correspondentes em `message_attachments`, portanto ficaram orfaos apos falha de envio;
+  - consulta em `app_call_diagnostics` confirmou que `send-message-notification` era chamada com `message_id` invalido;
+  - ajustada normalizacao do retorno da RPC `send_message`, aceitando retorno direto ou envelopado em array antes de acionar a notificacao;
+  - ajustado calculo de `size_bytes` para usar o tamanho real do arquivo lido em base64 quando o seletor Android nao retorna `fileSize`;
+  - adicionada limpeza de anexos ja enviados para o Storage caso a criacao/envio da mensagem falhe;
+  - `npm run typecheck` passou;
+  - `gradlew :app:compileDebugKotlin` passou;
+  - `gradlew assembleRelease` passou;
+  - `app.config` do build validado com Supabase staging `uvdwoisdcikzhqjwbhog`;
+  - APK staging confirmado gerado em `C:\Projetos\Confia\apks\confia-system-1.0.15-22-message-attachment-pushfix-STAGING-CONFIRMED-20260606.apk`.
+- Hotfix de envio e tela de mensagens em 06/06/2026:
+  - novo teste de servidor confirmou que mensagens de texto eram persistidas, mas a notificacao falhava com `message_notification_dispatch = ERROR` e `Invalid message_id`;
+  - novo teste de servidor confirmou objetos `.jpg` no bucket `message-attachments`, indicando que o upload ocorria, mas a vinculacao do anexo a mensagem precisava ser estabilizada;
+  - `sendMessage` agora resolve o ID real da mensagem retornada pela RPC `send_message`; se o retorno vier em formato inesperado, busca a ultima mensagem enviada pelo usuario na thread antes de chamar `send-message-notification`;
+  - falha de push de mensagem deixou de bloquear o fechamento visual do envio, mantendo a mensagem persistida e liberando a interface;
+  - composer de mensagem agora limpa texto e anexo pendente imediatamente ao enviar;
+  - se o envio falhar depois de subir anexo ao Storage, o app remove os objetos ja enviados para evitar arquivos orfaos;
+  - tela de conversa removeu altura minima fixa e passou a usar area flexivel, reduzindo o espaco vazio abaixo do input;
+  - `npm run typecheck` passou;
+  - `gradlew assembleRelease` passou;
+  - `app.config` do build validado com Supabase staging `uvdwoisdcikzhqjwbhog`;
+  - APK staging confirmado gerado em `C:\Projetos\Confia\apks\confia-system-1.0.16-23-message-send-layout-pushfix-STAGING-CONFIRMED-20260606.apk`.
+- Hotfix de legenda/anexo e push de mensagem em 06/06/2026:
+  - teste do usuario confirmou que o anexo so era enviado quando tambem havia texto digitado;
+  - composer passou a exibir preview do anexo selecionado, texto de legenda opcional e botao para remover o anexo antes do envio;
+  - envio de anexo sem legenda permanece permitido pela RPC `send_message`;
+  - payload enviado para `send-message-notification` passou a incluir `thread_id`;
+  - Edge Function `send-message-notification` passou a usar `thread_id` como fallback para buscar a ultima mensagem do remetente quando o `message_id` recebido for invalido;
+  - FCM nativo de mensagens passou a ser enviado como `data-only` de alta prioridade, para forcar o recebimento pelo `ConfiaFirebaseMessagingService` em background;
+  - Edge Function `send-message-notification` redeployada no Supabase staging `uvdwoisdcikzhqjwbhog`;
+  - `npm run typecheck` passou;
+  - `gradlew :app:compileDebugKotlin` passou;
+  - `gradlew assembleRelease` passou;
+  - `app.config` do build validado com Supabase staging `uvdwoisdcikzhqjwbhog`;
+  - APK staging confirmado gerado em `C:\Projetos\Confia\apks\confia-system-1.0.17-24-message-attachment-caption-notification-STAGING-CONFIRMED-20260606.apk`.
+- Hotfix de UX de mensagens, preview e notificacao em 06/06/2026:
+  - diagnostico real confirmou que `send-message-notification` ainda recebia `message_id` invalido e `thread_id` nulo nos testes;
+  - app passou a aceitar retorno direto em UUID da RPC `send_message`, evitando fallback com identificador invalido;
+  - Edge Function `send-message-notification` passou a buscar a ultima mensagem do remetente mesmo sem `thread_id` valido, mantendo o fallback por thread quando disponivel;
+  - tela de mensagens deixou de atualizar o estado quando o polling retorna as mesmas mensagens, reduzindo reload/flicker de imagens;
+  - imagens enviadas agora podem ser tocadas para abrir preview em tela cheia;
+  - composer reforca que legenda e opcional e que o usuario pode enviar apenas a imagem;
+  - botoes de mensagem no Interfone passaram a exibir badge de nao lidas por destino;
+  - Edge Function `send-message-notification` redeployada no Supabase staging `uvdwoisdcikzhqjwbhog`;
+  - `npm run typecheck` passou;
+  - `gradlew assembleRelease` passou;
+  - `app.config` do build validado com Supabase staging `uvdwoisdcikzhqjwbhog`;
+  - APK staging confirmado gerado em `C:\Projetos\Confia\apks\confia-system-1.0.18-25-messages-notification-image-preview-STAGING-20260606.apk`.
+- Micro-hotfix de foco na conversa em 07/06/2026:
+  - ao abrir uma conversa, a tela agora rola automaticamente para a ultima mensagem;
+  - o input de mensagem recebe foco automaticamente apos a conversa carregar;
+  - `ScrollView` da conversa passou a manter taps no teclado/composer com `keyboardShouldPersistTaps`;
+  - objetivo: evitar que o usuario precise descer manualmente ate o campo de mensagem.
+- Refatoracao de layout da conversa em 07/06/2026:
+  - analise de video confirmou que a conversa ainda estava dentro do `ScrollView` global do app, fazendo o composer participar da rolagem;
+  - tela de Mensagens passou a usar area propria com altura flexivel entre header e barra inferior;
+  - conversa ativa passou de `ScrollView` para `FlatList`, mantendo apenas as mensagens como area rolavel;
+  - header da conversa, anexos pendentes e composer ficaram fora da lista de mensagens;
+  - composer permanece fixo no rodape da area de conversa e sobe com o teclado pelo comportamento de resize do Android;
+  - abertura da conversa continua rolando para o fim e focando o input automaticamente;
+  - objetivo: comportamento mais proximo de chat profissional, com input sempre acessivel e anexos/imagens sem empurrar a digitacao para fora da tela.
 
 Observacao importante:
 
 - Esta etapa e a primeira base nativa Android. O teste esperado e verificar se, com o app em background, a mensagem FCM data-only aciona o CallKeep e traz o app para a tela de Interfone.
 - O refinamento seguinte e tratar aceitar/recusar diretamente na UI nativa e sincronizar cancelamento/encerramento remoto da chamada nativa.
+- Em 26/05/2026, a base estavel segue sem CallKeep/ConnectionService por estabilidade. O comportamento MVP aceito e notificacao/vibracao em background, toque na notificacao e abertura/atendimento pelo app. Chamada nativa estilo WhatsApp permanece como evolucao separada.
 
 Escopo previsto:
 

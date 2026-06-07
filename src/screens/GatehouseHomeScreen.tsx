@@ -3,6 +3,7 @@ import { Alert, StyleSheet, Text, View } from 'react-native';
 
 import { ActiveCallExperience, IncomingCallExperience, OutgoingCallExperience } from '../components/CallExperience';
 import { Card } from '../components/Card';
+import { MessageActionButton } from '../components/MessageActionButton';
 import { PhoneActionButton } from '../components/PhoneActionButton';
 import { PrimaryButton } from '../components/PrimaryButton';
 import { demoUnits } from '../data/demo-data';
@@ -11,18 +12,22 @@ import { answerGatehouseCall, cancelCall, endCall, getMyCallHistory, getMyPendin
 import { isCallRelevantToGatehouse, isOutgoingGatehouseCall } from '../services/call-ownership';
 import { getErrorMessage, logCallDiagnostic } from '../services/diagnostics';
 import { reportAppError } from '../services/error-reporting';
+import { listMyMessageThreads, type MessageTarget, type MessageThread } from '../services/messages';
 import { theme } from '../theme/theme';
 import type { AuthenticatedUser, BackendCallRecord, CallRecord, PendingPortariaCall, UnitDirectoryItem, UserContext } from '../types/domain';
 
 type GatehouseHomeScreenProps = {
   context: UserContext;
   directoryUnits: UnitDirectoryItem[];
+  messagingEnabled?: boolean;
+  onOpenMessages?: (target: MessageTarget) => void;
   user: AuthenticatedUser;
 };
 
 const CALL_REFRESH_INTERVAL_MS = 5000;
+const MESSAGE_BADGE_REFRESH_INTERVAL_MS = 10000;
 
-export function GatehouseHomeScreen({ context, directoryUnits, user }: GatehouseHomeScreenProps) {
+export function GatehouseHomeScreen({ context, directoryUnits, messagingEnabled = false, onOpenMessages, user }: GatehouseHomeScreenProps) {
   const activeDevice = context.portaria_devices.find((device) => device.is_active);
   const units = directoryUnits.length > 0 ? directoryUnits : demoUnits;
   const unitLabels = useMemo(() => new Map(units.map((unit) => [unit.id, unit.label])), [units]);
@@ -32,6 +37,7 @@ export function GatehouseHomeScreen({ context, directoryUnits, user }: Gatehouse
   const [busyUnitIds, setBusyUnitIds] = useState<Set<string>>(new Set());
   const [activeCallTarget, setActiveCallTarget] = useState<string | null>(null);
   const [showHistory, setShowHistory] = useState(false);
+  const [messageThreads, setMessageThreads] = useState<MessageThread[]>([]);
   const ringingCalls = pendingCalls.length;
 
   useEffect(() => {
@@ -43,6 +49,19 @@ export function GatehouseHomeScreen({ context, directoryUnits, user }: Gatehouse
 
     return () => clearInterval(interval);
   }, [unitLabels, user.condominiumId]);
+
+  useEffect(() => {
+    if (!messagingEnabled) {
+      return undefined;
+    }
+
+    void refreshMessageBadges(setMessageThreads);
+    const interval = setInterval(() => {
+      void refreshMessageBadges(setMessageThreads);
+    }, MESSAGE_BADGE_REFRESH_INTERVAL_MS);
+
+    return () => clearInterval(interval);
+  }, [messagingEnabled]);
 
   const relevantHistory = history.filter((call) => isCallRelevantToGatehouse(call, context));
   const activeCall = relevantHistory.find((call) => call.status === 'ANSWERED' && !call.endedAt);
@@ -119,6 +138,9 @@ export function GatehouseHomeScreen({ context, directoryUnits, user }: Gatehouse
               activeDeviceId={activeDevice?.id ?? null}
               busyUnitIds={busyUnitIds}
               key={unit.id}
+              messageThreads={messageThreads}
+              messagingEnabled={messagingEnabled}
+              onOpenMessages={onOpenMessages}
               setActiveCallTarget={setActiveCallTarget}
               setFeedback={setFeedback}
               setHistory={setHistory}
@@ -153,6 +175,9 @@ function GatehouseUnitCard({
   activeCallTarget,
   activeDeviceId,
   busyUnitIds,
+  messageThreads,
+  messagingEnabled,
+  onOpenMessages,
   setActiveCallTarget,
   setFeedback,
   setHistory,
@@ -164,6 +189,9 @@ function GatehouseUnitCard({
   activeCallTarget: string | null;
   activeDeviceId: string | null;
   busyUnitIds: Set<string>;
+  messageThreads: MessageThread[];
+  messagingEnabled: boolean;
+  onOpenMessages?: (target: MessageTarget) => void;
   setActiveCallTarget: (target: string | null) => void;
   setFeedback: (message: string | null) => void;
   setHistory: (history: CallRecord[]) => void;
@@ -182,35 +210,66 @@ function GatehouseUnitCard({
           <Text style={styles.itemTitle}>{unit.label}</Text>
           <Text style={styles.itemMeta}>{unit.residents.join(', ')}</Text>
         </View>
-        <PhoneActionButton
-          accessibilityLabel={`Chamar unidade ${unit.label}`}
-          disabled={activeCallTarget !== null}
-          muted={!unit.canReceiveCalls || isBusy}
-          testID={unit.canReceiveCalls ? 'gatehouse-call-unit' : 'gatehouse-unit-unavailable'}
-          onPress={() =>
-            isBusy
-              ? showInfo('Unidade em atendimento', 'Esta unidade esta em atendimento. Tente novamente em alguns minutos.')
-              : unit.canReceiveCalls
-              ? handleGatehouseToUnitCall(
-                  unit.id,
-                  unit.label,
-                  activeDeviceId,
-                  user,
-                  unitLabels,
-                  setHistory,
-                  setPendingCalls,
-                  setFeedback,
-                  setActiveCallTarget,
-                )
-              : showInfo('Unidade bloqueada', 'Esta unidade nao recebe chamadas no momento.')
-          }
-        />
+        <View style={styles.actionButtons}>
+          {messagingEnabled ? (
+            <MessageActionButton
+              accessibilityLabel={`Enviar mensagem para unidade ${unit.label}`}
+              disabled={activeCallTarget !== null}
+              testID="gatehouse-message-unit"
+              unreadCount={getGatehouseUnitUnreadCount(messageThreads, unit.id)}
+              onPress={() =>
+                onOpenMessages?.({
+                  label: unit.label,
+                  targetType: 'UNIT',
+                  targetUnitId: unit.id,
+                })
+              }
+            />
+          ) : null}
+          <PhoneActionButton
+            accessibilityLabel={`Chamar unidade ${unit.label}`}
+            disabled={activeCallTarget !== null}
+            muted={!unit.canReceiveCalls || isBusy}
+            testID={unit.canReceiveCalls ? 'gatehouse-call-unit' : 'gatehouse-unit-unavailable'}
+            onPress={() =>
+              isBusy
+                ? showInfo('Unidade em atendimento', 'Esta unidade esta em atendimento. Tente novamente em alguns minutos.')
+                : unit.canReceiveCalls
+                ? handleGatehouseToUnitCall(
+                    unit.id,
+                    unit.label,
+                    activeDeviceId,
+                    user,
+                    unitLabels,
+                    setHistory,
+                    setPendingCalls,
+                    setFeedback,
+                    setActiveCallTarget,
+                  )
+                : showInfo('Unidade bloqueada', 'Esta unidade nao recebe chamadas no momento.')
+            }
+          />
+        </View>
       </View>
       <Text style={[styles.itemHelp, !isBusy && unit.canReceiveCalls ? styles.statusOk : styles.statusBlocked]}>
         {activeCallTarget === unit.id ? 'Chamando...' : helper}
       </Text>
     </Card>
   );
+}
+
+async function refreshMessageBadges(setMessageThreads: (threads: MessageThread[]) => void) {
+  try {
+    setMessageThreads(await listMyMessageThreads());
+  } catch {
+    // Badge refresh is auxiliary and cannot disturb the interfone screen.
+  }
+}
+
+function getGatehouseUnitUnreadCount(threads: MessageThread[], unitId: string) {
+  return threads
+    .filter((thread) => thread.thread_type === 'PORTARIA_UNIT' && thread.unit_a_id === unitId)
+    .reduce((total, thread) => total + thread.unread_count, 0);
 }
 
 function CallHistory({ calls, onCancel }: { calls: CallRecord[]; onCancel: (callId: string) => void }) {
@@ -684,5 +743,10 @@ const styles = StyleSheet.create({
     fontSize: 14,
     fontWeight: '700',
     marginTop: theme.spacing.md,
+  },
+  actionButtons: {
+    alignItems: 'center',
+    flexDirection: 'row',
+    gap: theme.spacing.sm,
   },
 });
