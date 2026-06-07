@@ -42,11 +42,12 @@ O Confia System centraliza recursos de monitoramento e comunicacao para ambiente
 
 Com o app, moradores, administradores e equipes autorizadas podem acompanhar eventos importantes, receber alertas e acessar funcionalidades de seguranca em uma experiencia simples e organizada.
 
-Nesta primeira versao, o Confia System traz o interfone digital como recurso principal, permitindo chamadas entre portaria e usuarios autorizados com notificacoes no celular. A plataforma foi pensada para evoluir com novos modulos, como controle de acesso, monitoramento de cameras, historico de eventos, avisos, ocorrencias e integracoes com sistemas de seguranca.
+Nesta primeira versao, o Confia System traz o interfone digital como recurso principal, permitindo chamadas entre portaria e usuarios autorizados com notificacoes no celular. O app tambem inclui mensagens entre portaria, unidades e moradores autorizados, com envio de texto e imagens/anexos para comunicacoes operacionais do condominio. A plataforma foi pensada para evoluir com novos modulos, como controle de acesso, monitoramento de cameras, historico de eventos, avisos, ocorrencias e integracoes com sistemas de seguranca.
 
 Principais recursos:
 - Interfone digital pelo celular.
-- Notificacoes de chamadas e eventos relevantes.
+- Mensagens com texto e imagens/anexos entre usuarios autorizados.
+- Notificacoes de chamadas, mensagens e eventos relevantes.
 - Experiencia focada em ambientes monitorados.
 - Base preparada para novos modulos de seguranca e gestao.
 - Acesso restrito a usuarios autorizados.
@@ -59,11 +60,14 @@ Criar no minimo 4 imagens para a Play Store:
 - Tela de login/acesso autorizado.
 - Tela de chamada de interfone recebida.
 - Tela de chamada em andamento.
+- Tela de mensagens com conversa e envio de imagem.
 - Tela de historico/status/monitoramento ou dashboard.
 
 Textos curtos para sobrepor nas screenshots:
 - Interfone digital no celular
 - Atenda chamadas com seguranca
+- Converse com a portaria e moradores
+- Envie fotos e comprovantes
 - Alertas importantes em tempo real
 - Uma base para todo o monitoramento
 
@@ -118,7 +122,7 @@ Dados coletados:
 - Informacoes pessoais: nome, e-mail ou telefone, se usados no cadastro/login.
 - IDs do dispositivo ou outros IDs: token de notificacao push, identificadores tecnicos.
 - Audio: usado para chamadas de interfone.
-- Fotos e videos: declarar camera se a feature usar video ou captura.
+- Fotos e videos: declarar selecao/envio de imagens quando usadas como anexos de mensagens.
 - Informacoes e desempenho do app: logs, diagnosticos, falhas e metricas tecnicas, se coletados.
 
 Finalidades:
@@ -136,28 +140,60 @@ Criptografia em transito:
 Exclusao de dados:
 - Informar o canal ou fluxo para solicitar exclusao de conta/dados, se aplicavel.
 
+## Checklist atual da primeira versao
+
+Status em 07/06/2026:
+
+- [x] Nome publico definido: Confia System.
+- [x] Package Android definitivo: `br.com.confia.system`.
+- [x] Identidade visual inicial aplicada no app.
+- [x] Login real via Supabase Auth.
+- [x] Separacao de ambientes staging/develop e production.
+- [x] APK local de testes apontando para staging/develop.
+- [x] Backend com regras de condominio, portaria, unidade e morador.
+- [x] Interfone com chamadas morador-portaria, portaria-morador e morador-morador.
+- [x] Bloqueio quando unidade/portaria esta ocupada.
+- [x] Ordem de moradores para tentativa sequencial.
+- [x] Audio real via LiveKit validado em aparelhos reais.
+- [x] Notificacao de chamada em background com acoes atender/recusar quando suportado pelo Android/fabricante.
+- [x] Mensagens entre portaria, moradores e unidades.
+- [x] Envio de imagem/anexo com legenda opcional.
+- [x] Preview de imagem enviada/recebida.
+- [x] Badge de mensagens nao lidas nos atalhos de mensagem.
+- [x] Politica de versao minima obrigatoria.
+- [x] Tela de configuracoes com versao instalada e status de notificacoes.
+- [x] Reporte automatico de erros para backend/GitHub.
+- [x] Documentacao de escopo e estrategia de testes atualizada.
+- [ ] AAB assinado de producao para Google Play.
+- [ ] Teste interno/fechado no Google Play.
+- [ ] Screenshots finais da loja.
+- [ ] Data Safety preenchido no Google Play Console.
+- [ ] Politica de privacidade revisada com dados juridicos finais.
+- [ ] Canal formal de suporte e exclusao de dados.
+- [ ] Conta Apple Developer e versao iOS.
+
 ## APK/AAB assinado
 
 Para Google Play, preferir **AAB assinado** em vez de APK.
 
 Checklist:
-- Confirmar nome publico: Confia System.
-- Confirmar icone final em `1024x1024`.
-- Gerar adaptive icon Android.
-- Nome no `app.json` atualizado para `Confia System`.
-- Package Android definitivo para loja: `br.com.confia.system`.
-- Firebase Android recriado para `br.com.confia.system` no projeto `confia-system`.
-- Gerar build de producao assinado.
-- Testar instalacao em aparelho real.
-- Enviar para teste interno antes da producao.
+- [x] Confirmar nome publico: Confia System.
+- [ ] Confirmar icone final em `1024x1024`.
+- [x] Gerar adaptive icon Android.
+- [x] Nome no `app.json` atualizado para `Confia System`.
+- [x] Package Android definitivo para loja: `br.com.confia.system`.
+- [x] Firebase Android recriado para `br.com.confia.system` no projeto `confia-system-prod`.
+- [ ] Gerar build de producao assinado.
+- [x] Testar instalacao em aparelho real por APK staging.
+- [ ] Enviar para teste interno antes da producao.
 
 ## Itens pendentes para finalizar
 
 - CNPJ/nome juridico ou nome de desenvolvedor.
 - E-mail de suporte.
-- URL da politica de privacidade publicada.
+- URL da politica de privacidade publicada e revisada.
 - Dominio/site oficial.
 - Lista real de SDKs usados em producao.
-- Se o app grava audio/video ou apenas transmite chamadas.
+- Confirmar em texto juridico que o app transmite audio e mensagens/anexos, sem gravacao de chamada nesta versao.
 - Processo de exclusao de conta/dados.
 - Screenshots finais capturadas no app.

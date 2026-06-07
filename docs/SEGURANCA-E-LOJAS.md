@@ -13,12 +13,12 @@
 
 ## Permissoes previstas
 
-- Microfone: somente quando a voz real entrar.
-- Notificacoes: para chamada recebida e chamada perdida.
-- Camera: fora do MVP.
+- Microfone: usado nas chamadas de voz do interfone digital via LiveKit.
+- Notificacoes: para chamadas recebidas, chamadas perdidas, mensagens recebidas e alertas operacionais.
+- Camera: fora da captura direta no MVP; o app usa selecao de imagens/arquivos da galeria para anexos de mensagens.
 - Localizacao: fora do MVP.
 - Contatos: fora do MVP.
-- Fotos/arquivos: fora do MVP.
+- Fotos/arquivos: usados no modulo de mensagens para anexos limitados, com armazenamento controlado no backend e retencao planejada de 90 dias.
 
 ## Apple App Store
 
@@ -37,7 +37,8 @@
 
 ## LGPD
 
-- Informar finalidade da coleta: operacao do interfone digital.
+- Informar finalidade da coleta: operacao do interfone digital, notificacoes, mensagens e anexos entre usuarios autorizados.
 - Ter politica de privacidade publica.
 - Definir retencao de historico de chamadas.
+- Definir retencao e limpeza automatica de anexos de mensagens.
 - Definir processo para exclusao ou anonimizacao quando aplicavel.
